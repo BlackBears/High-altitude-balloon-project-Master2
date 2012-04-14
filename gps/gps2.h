@@ -12,5 +12,6 @@
 #include "../common/global.h"
 
 BOOL gps2_set_debug_mode_on(u08 status);
+BOOL gps2_set_diagnostic_mode_on(u08 status);
 
 #endif /* GPS2_H_ */

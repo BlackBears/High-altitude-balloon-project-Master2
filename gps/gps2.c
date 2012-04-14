@@ -38,7 +38,11 @@ BOOL gps2_set_debug_mode_on(u08 status) {
 	return FALSE;
 }
 
-void gps2_set_diagnostic_mode_on(u08 status) {
+BOOL gps2_set_diagnostic_mode_on(u08 status) {
 	u08 data[1];
-	data[0] = (status)?
+	data[0] = (status)?DX_MODE_ON:DX_MODE_OFF
+	i2cMasterSendNI(GPS2_I2C_SLAVE_ADDRESS,1,&data);
+	i2cMasterReceiveNI(GPS2_I2C_SLAVE_ADDRESS,1,&data);
+	if( data == I2C_DEBUG_CONFIRM_BYTE ) return TRUE;
+	return FALSE;
 }
