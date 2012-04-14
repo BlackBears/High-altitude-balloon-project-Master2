@@ -1,0 +1,174 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectVersion>6.0</ProjectVersion>
+    <ToolchainName>com.Atmel.AVRGCC8</ToolchainName>
+    <ProjectGuid>{b4d112dc-98bf-4a90-b714-0251ab8adce9}</ProjectGuid>
+    <avrdevice>ATmega128</avrdevice>
+    <avrdeviceseries>none</avrdeviceseries>
+    <OutputType>Executable</OutputType>
+    <Language>C</Language>
+    <OutputFileName>$(MSBuildProjectName)</OutputFileName>
+    <OutputFileExtension>.elf</OutputFileExtension>
+    <OutputDirectory>$(MSBuildProjectDirectory)\$(Configuration)</OutputDirectory>
+    <AssemblyName>HAB-Master2</AssemblyName>
+    <Name>HAB-Master2</Name>
+    <RootNamespace>HAB-Master2</RootNamespace>
+    <ToolchainFlavour>Native</ToolchainFlavour>
+    <KeepTimersRunning>true</KeepTimersRunning>
+    <OverrideVtor>false</OverrideVtor>
+    <OverrideVtorValue />
+    <eraseonlaunchrule>0</eraseonlaunchrule>
+    <AsfVersion>3.0.1</AsfVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <ToolchainSettings>
+      <AvrGcc>
+        <avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>True</avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>
+        <avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>True</avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>
+        <avrgcc.compiler.optimization.level>Optimize for size (-Os)</avrgcc.compiler.optimization.level>
+        <avrgcc.compiler.optimization.PackStructureMembers>True</avrgcc.compiler.optimization.PackStructureMembers>
+        <avrgcc.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcc.compiler.optimization.AllocateBytesNeededForEnum>
+        <avrgcc.compiler.optimization.DebugLevel>None</avrgcc.compiler.optimization.DebugLevel>
+        <avrgcc.compiler.warnings.AllWarnings>True</avrgcc.compiler.warnings.AllWarnings>
+        <avrgcc.linker.libraries.Libraries>
+          <ListValues>
+            <Value>m</Value>
+          </ListValues>
+        </avrgcc.linker.libraries.Libraries>
+      </AvrGcc>
+    </ToolchainSettings>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <ToolchainSettings>
+      <AvrGcc>
+        <avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>True</avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>
+        <avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>True</avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>
+        <avrgcc.compiler.optimization.PackStructureMembers>True</avrgcc.compiler.optimization.PackStructureMembers>
+        <avrgcc.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcc.compiler.optimization.AllocateBytesNeededForEnum>
+        <avrgcc.compiler.optimization.level>Optimize (-O1)</avrgcc.compiler.optimization.level>
+        <avrgcc.compiler.optimization.DebugLevel>Default (-g2)</avrgcc.compiler.optimization.DebugLevel>
+        <avrgcc.compiler.warnings.AllWarnings>True</avrgcc.compiler.warnings.AllWarnings>
+        <avrgcc.assembler.debugging.DebugLevel>Default (-Wa,-g)</avrgcc.assembler.debugging.DebugLevel>
+        <avrgcc.linker.libraries.Libraries>
+          <ListValues>
+            <Value>m</Value>
+          </ListValues>
+        </avrgcc.linker.libraries.Libraries>
+      </AvrGcc>
+    </ToolchainSettings>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="capabilities\buffer.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\buffer.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\crc8.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\crc8.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\i2c.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\i2c.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\i2cconf.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\onewire.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\onewire.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\rprintf.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\rprintf.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\uart.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\uart.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\uart_addon.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\uart_addon.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\vfd.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\vfd.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="common\avrlibdefs.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="common\avrlibtypes.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="common\global.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="common\settings.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="common\settings.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="common\types.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="gps\gps2.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="gps\gps2.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="HAB-Master2.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="peripherals\ds1307.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="peripherals\ds1307.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="sensors\bmp085.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="sensors\bmp085.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="sensors\ds18x20.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="sensors\ds18x20.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="sensors\temp102.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="sensors\tmp102.h">
+      <SubType>compile</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="capabilities" />
+    <Folder Include="common" />
+    <Folder Include="gps" />
+    <Folder Include="peripherals" />
+    <Folder Include="sensors" />
+  </ItemGroup>
+  <Import Project="$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets" />
+</Project>
