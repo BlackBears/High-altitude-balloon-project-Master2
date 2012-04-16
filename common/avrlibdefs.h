@@ -69,8 +69,8 @@
 #define GNUC_PACKED __attribute__((packed)) 
 
 // port address helpers
-#define DDR(x) ((x)-1)    // address of data direction register of port x
-#define PIN(x) ((x)-2)    // address of input register of port x
+//#define DDR(x) ((x)-1)    // address of data direction register of port x
+//#define PIN(x) ((x)-2)    // address of input register of port x
 
 // MIN/MAX/ABS macros
 #define MIN(a,b)			((a<b)?(a):(b))
