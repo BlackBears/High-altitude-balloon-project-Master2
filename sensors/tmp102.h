@@ -13,6 +13,4 @@
 
 u16 tmp102_read_temp();
 
-
-
 #endif /* TMP102_H_ */
