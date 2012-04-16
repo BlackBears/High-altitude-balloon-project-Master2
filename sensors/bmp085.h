@@ -9,7 +9,7 @@
 #ifndef BMP085_H_
 #define BMP085_H_
 
-
+void bmp085_convert(u32 *temperature, u32 *pressure);
 
 
 

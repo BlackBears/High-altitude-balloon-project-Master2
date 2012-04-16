@@ -9,7 +9,9 @@
 #ifndef TMP102_H_
 #define TMP102_H_
 
+#include "../common/global.h"
 
+u16 tmp102_read_temp();
 
 
 

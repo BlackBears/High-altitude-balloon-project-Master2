@@ -8,6 +8,7 @@
 /*  OPCODES FOR OUR I2C INTERFACE */
 
 #include "gps2.h"
+#include "../capabilities/i2c.h"
 
 #define E_W_DIR     0x20    // East-West direction (1 char "E" or "W"
 #define E_W_VEL     0x21    // East_West velocity (2 bytes u16 in m/s * 100 )
@@ -34,15 +35,15 @@ BOOL gps2_set_debug_mode_on(u08 status) {
 	data[0] = (status)?DEBUG_ON:DEBUG_OFF;
 	i2cMasterSendNI(GPS2_I2C_SLAVE_ADDRESS,1,&data);
 	i2cMasterReceiveNI(GPS2_I2C_SLAVE_ADDRESS,1,&data);
-	if( data == I2C_DEBUG_CONFIRM_BYTE ) return TRUE;
+	if( data[0] == I2C_DEBUG_CONFIRM_BYTE ) return TRUE;
 	return FALSE;
 }
 
 BOOL gps2_set_diagnostic_mode_on(u08 status) {
 	u08 data[1];
-	data[0] = (status)?DX_MODE_ON:DX_MODE_OFF
+	data[0] = (status)?DX_MODE_ON:DX_MODE_OFF;
 	i2cMasterSendNI(GPS2_I2C_SLAVE_ADDRESS,1,&data);
 	i2cMasterReceiveNI(GPS2_I2C_SLAVE_ADDRESS,1,&data);
-	if( data == I2C_DEBUG_CONFIRM_BYTE ) return TRUE;
+	if( data[0] == I2C_DEBUG_CONFIRM_BYTE ) return TRUE;
 	return FALSE;
 }
