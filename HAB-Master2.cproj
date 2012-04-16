@@ -120,6 +120,9 @@
     <Compile Include="common\global.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="common\pindefs.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="common\settings.c">
       <SubType>compile</SubType>
     </Compile>
@@ -156,7 +159,7 @@
     <Compile Include="sensors\ds18x20.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="sensors\temp102.c">
+    <Compile Include="sensors\tmp102.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="sensors\tmp102.h">
