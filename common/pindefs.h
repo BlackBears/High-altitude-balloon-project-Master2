@@ -14,6 +14,7 @@
 #define BMP085_EOC_PORT	PORTC
 #define BMP085_EOC_PIN	PC0
 
+#define RTC_1HZ_INT	7	//	the RTC 1Hz signal will interrupt on INT7
 
 
 #endif /* PINDEFS_H_ */

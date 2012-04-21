@@ -598,3 +598,7 @@ void disk_timerproc (void)
 	}
 }
 
+#warning get_fattime() should actually return a real value from RTC
+DWORD get_fattime() {
+	return 0;	
+}

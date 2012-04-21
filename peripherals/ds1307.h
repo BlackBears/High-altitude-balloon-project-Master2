@@ -20,8 +20,18 @@
 #define DS1307_YEAR_ADDR		0x06
 #define DS1307_CONTROL_ADDR		0x07
 
+
+
 enum { kDS1307Mode12HR, kDS1307Mode24HR};
 typedef u08 DS1307HourMode;
+
+enum { 
+	k_ds1307_sqw_mode_a,	//	1 Hz
+	k_ds1307_sqw_mode_b,	//	4.096 kHz
+	k_ds1307_sqw_mode_c,	//	8.192 kHz
+	k_ds1307_sqw_mode_d		//	32.768 kHz
+};
+typedef u08 ds1307_sqw_mode_t;
 
 void ds1307_init(DS1307HourMode mode);
 u08 ds1307_seconds(void);
@@ -32,5 +42,7 @@ void ds1307_set_seconds(u08 seconds);
 void ds1307_set_minutes(u08 minutes);
 void ds1307_set_hours(u08 hours);
 void ds1307_set_year(u08 year);
+void ds1307_sqw_enable(BOOL state);
+void ds1307_sqw_set_mode(ds1307_sqw_mode_t mode);
 
 #endif /* DS1307_H_ */
