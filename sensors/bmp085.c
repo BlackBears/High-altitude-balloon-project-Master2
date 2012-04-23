@@ -54,8 +54,10 @@ short bmp085_md;
 void bmp085_read_calibration_data();
 u08 bmp085_read_register(u08 reg);
 u16 bmp085_read_word(u08 reg);
-u32 bmp085_read_temp();
-u32 bmp085_read_pressure();
+//u32 bmp085_read_temp();
+long bmp085_read_temp();
+//u32 bmp085_read_pressure();
+long bmp085_read_pressure(void);
 
 void bmp085_init() {
 	//	configure EOC pin as input
@@ -112,6 +114,39 @@ void bmp085_convert(u32 *temperature, u32 *pressure) {
 	*pressure = p + ((x1 + x2 + 3791) >> 4);
 }
 
+void bmp085_convert(long* temperature, long* pressure) {
+    long ut;
+	long up;
+	long x1, x2, b5, b6, x3, b3, p;
+	unsigned long b4, b7;
+	
+	ut = bmp085ReadTemp();
+	ut = bmp085ReadTemp();	// some bug here, have to read twice to get good data
+	up = bmp085ReadPressure();
+	up = bmp085ReadPressure();
+	
+	x1 = ((long)ut - ac6) * ac5 >> 15;
+	x2 = ((long) mc << 11) / (x1 + md);
+	b5 = x1 + x2;
+	*temperature = (b5 + 8) >> 4;
+	
+	b6 = b5 - 4000;
+	x1 = (b2 * (b6 * b6 >> 12)) >> 11;
+	x2 = ac2 * b6 >> 11;
+	x3 = x1 + x2;
+	b3 = (((int32_t) ac1 * 4 + x3) + 2)/4;
+	x1 = ac3 * b6 >> 13;
+	x2 = (b1 * (b6 * b6 >> 12)) >> 16;
+	x3 = ((x1 + x2) + 2) >> 2;
+	b4 = (ac4 * (unsigned long) (x3 + 32768)) >> 15;
+	b7 = ((unsigned long) up - b3) * (50000 >> OSS);
+	p = b7 < 0x80000000 ? (b7 * 2) / b4 : (b7 / b4) * 2;
+	x1 = (p >> 8) * (p >> 8);
+	x1 = (x1 * 3038) >> 16;
+	x2 = (-7357 * p) >> 16;
+	*pressure = p + ((x1 + x2 + 3791) >> 4);
+}
+
 u08 bmp085_read_register(u08 reg) {
 	device_data[0] = reg;
 	i2cMasterSendNI(BMP085_BASE_ADDRESS,1,&device_data);
@@ -126,6 +161,40 @@ u16 bmp085_read_word(u08 reg) {
 	return (device_data[0] << 8) | device_data[1];
 }
 
+short bmp085_read_short(unsigned char address) {
+    char msb, lsb;
+    device_data[0] = address;
+    i2cMasterSendNI(BMP085_BASE_ADDRESS,1,&device_data);
+    i2cMasterReceiverNI(BMP085_BASE_ADDRESS,2,&device_data);
+    
+    short return_data = data[0] << 8;
+    return_data |= data[1]
+}
+
+long bmp085_read_temp() {
+    //	begin temperature conversion
+	device_data[0] = BMP085_CTL;
+	device_data[1] = BMP085_TEMP;
+	i2cMasterSendNI(BMP085_BASE_ADDRESS,2,&device_data);
+	_delay_ms(10);
+	return (long) bmp085_read_short(BMP085_RSLT);
+}
+
+long bmp085_read_pressure(void) {
+    //	begin temperature conversion
+	device_data[0] = BMP085_CTL;
+	device_data[1] = BMP085_P0;
+	i2cMasterSendNI(BMP085_BASE_ADDRESS,2,&device_data);
+	
+	_delay_ms(10);
+	long p = 0;
+	p = bmp085_read_short(BMP085_RSLT);
+	p &= 0x0000FFFF;
+	
+	return p;
+}
+
+/*
 u32 bmp085_read_temp() {
 	//	begin temperature conversion
 	device_data[0] = BMP085_CTL;
@@ -139,6 +208,7 @@ u32 bmp085_read_temp() {
 	i2cMasterReceiveNI(BMP085_BASE_ADDRESS,2,&device_data);
 	return (device_data[0] << 8) | device_data[1];
 }
+
 
 u32 bmp085_read_pressure() {
 	//	begin temperature conversion
@@ -154,3 +224,4 @@ u32 bmp085_read_pressure() {
 	u16 pressure = (device_data[0] << 8) | device_data[1];
 	return pressure & 0x0000FFFF;
 }
+*/
