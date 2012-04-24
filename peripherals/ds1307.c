@@ -9,9 +9,9 @@
 #include "../capabilities/i2c.h"
 #include "../common/global.h"
 
-#define SQWE	(1<<4);
-#define RS0	(1<<0);
-#define RS1	(1<<1);
+#define SQWE	(1<<4)
+#define RS0	(1<<0)
+#define RS1	(1<<1)
 #define DS1307_BASE_ADDRESS 0xD0
 #define CH (1<<7)
 #define HR (1<<6)
@@ -156,31 +156,6 @@ u08 ds1307_read_register(u08 reg)
 	return device_data[0];
 }
 
-void ds1307_sqw_enable(BOOL state) {
-	u08 ctl_reg = ds1307_read_register(DS1307_CONTROL_ADDR);
-	if( state == TRUE )
-		ctl_reg |= SQWE;
-	else
-		ctl_reg &= ~SQWE;
-		
-	ds1307_write_register(DS1307_CONTROL_ADDR,ctl_reg);
-}
-
 void ds1307_sqw_set_mode(ds1307_sqw_mode_t mode) {
-	u08 ctl_reg = ds1307_read_register(DS1307_CONTROL_ADDR);
-	if( mode == k_ds1307_sqw_mode_a ) {
-		ctl_reg &= ~RS0;
-		ctl_reg &= ~RS1;
-	} 
-	else if( mode == k_ds1307_sqw_mode_b )  {
-		ctl_reg &= ~RS0;
-		ctl_reg |= RS1;
-	}
-		ctl_reg &= ~0b00000010;
-	else if( mode == k_ds1307_sqw_mode_c ) {
-		ctl_reg |= RS1;
-		ctl_reg &= ~RS0;
-	}
-	else if( mode == k_ds1307_sqw_mode_d )
-		ctl_reg |= RS1 | RS0;
+	ds1307_write_register(DS1307_CONTROL_ADDR,0x90 + mode);
 }
