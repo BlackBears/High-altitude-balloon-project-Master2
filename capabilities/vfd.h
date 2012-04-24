@@ -66,6 +66,7 @@
 #define VFD_CTL_CUR_FLASH   0x15
 #define VFD_CTL_CUR_ULINE   0x16
 #define VFD_CTL_CUR_INV     0x18
+#define VFD_CTL_ESC			0x1B
 
 enum {
     kVFDLuminance1 = VFD_CTL_LUM_025,

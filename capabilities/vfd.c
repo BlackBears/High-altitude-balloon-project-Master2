@@ -79,7 +79,8 @@ void vfd_cls(void)
 
 void vfd_cr(void)
 {
-    _vfd_write(VFD_CTL_CR,VFD_WRITE_DATA);
+    _vfd_write(VFD_CTL_ESC,VFD_WRITE_DATA);
+	_vfd_write(0x14,VFD_WRITE_DATA);
 }
 
 void vfd_putc(char c)
@@ -135,4 +136,3 @@ void _vfd_write(uint8_t data, command_or_data cmd)
     _delay_ms(1);
     vfd_wr_high();
 }
-
