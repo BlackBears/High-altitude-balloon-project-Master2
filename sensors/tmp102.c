@@ -16,16 +16,16 @@
 #define TMP102_LOW_REG		0x02
 #define TMP102_HIGH_REG		0x03
 
-u16 tmp102_read_temp() {
+s16 tmp102_read_temp(tmp102_addr_t address) {
 	u08 data[2];
 	data[0] = TMP102_TEMP_REG;
-	i2cMasterSendNI(TMP102_BASE_ADDRESS,1,&data);
-	i2cMasterReceiveNI(TMP102_BASE_ADDRESS,2,&data);
+	i2cMasterSendNI(address,1,&data);
+	i2cMasterReceiveNI(address,2,&data);
 	
 	u08 msb,lsb;
 	msb = data[0];
 	lsb = data[1];
-	u16 temp = (msb<<8) | lsb;
+	s16 temp = (msb<<8) | lsb;
 	temp >>= 4; //The TMP102 temperature registers are left justified, correctly right justify them
 	
 	//The tmp102 does twos compliment but has the negative bit in the wrong spot, so test for it and correct if needed

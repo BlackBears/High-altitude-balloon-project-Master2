@@ -11,6 +11,14 @@
 
 #include "../common/global.h"
 
-u16 tmp102_read_temp();
+enum {
+	k_tmp102_addr0_gnd = 0x90,
+	k_tmp102_addr0_vcc = 0x92,
+	k_tmp102_addr0_sda = 0x94,
+	k_tmp102_addr0_scl = 0x96
+};
+typedef u08 tmp102_addr_t;
+
+s16 tmp102_read_temp(tmp102_addr_t address);
 
 #endif /* TMP102_H_ */
