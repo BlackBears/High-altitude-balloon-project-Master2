@@ -9,6 +9,7 @@
 #ifndef BMP085_H_
 #define BMP085_H_
 
+void bmp085_init();
 void bmp085_convert(long* temperature, long* pressure);
 
 

@@ -36,24 +36,26 @@
 #define OSS 0	// Oversampling Setting (note: code is not set up to use other OSS values)
 
 u08 device_data[2];
+char buff[20];
 
 /*	CALIBRATION VARIABLES */
-short bmp085_ac1;
-short bmp085_ac2; 
-short bmp085_ac3; 
-unsigned short bmp085_ac4;
-unsigned short bmp085_ac5;
-unsigned short bmp085_ac6;
-short bmp085_b1; 
-short bmp085_b2;
-short bmp085_mb;
-short bmp085_mc;
-short bmp085_md;
+short ac1;
+short ac2; 
+short ac3; 
+unsigned short ac4;
+unsigned short ac5;
+unsigned short ac6;
+short b1; 
+short b2;
+short mb;
+short mc;
+short md;
 
 /*	FUNCTION PROTOTYPES */
 void bmp085_read_calibration_data();
+short bmp085_read_short(unsigned char address);
 u08 bmp085_read_register(u08 reg);
-u16 bmp085_read_word(u08 reg);
+int bmp085_read_word(u08 reg);
 //u32 bmp085_read_temp();
 long bmp085_read_temp();
 //u32 bmp085_read_pressure();
@@ -68,19 +70,26 @@ void bmp085_init() {
 }
 
 void bmp085_read_calibration_data() {
-	bmp085_ac1 = bmp085_read_register(BMP085_AC1);
-	bmp085_ac2 = bmp085_read_register(BMP085_AC2);
-	bmp085_ac3 = bmp085_read_register(BMP085_AC3);
-	bmp085_ac4 = bmp085_read_register(BMP085_AC4);
-	bmp085_ac5 = bmp085_read_register(BMP085_AC5);
-	bmp085_ac6 = bmp085_read_register(BMP085_AC6);
-	bmp085_b1 = bmp085_read_register(BMP085_B1);
-	bmp085_b2 = bmp085_read_register(BMP085_B2);
-	bmp085_mb = bmp085_read_register(BMP085_MB);
-	bmp085_mc = bmp085_read_register(BMP085_MC);
-	bmp085_md = bmp085_read_register(BMP085_MD);
+	ac1 = bmp085_read_short(BMP085_AC1);
+	ac2 = bmp085_read_short(BMP085_AC2);
+	ac3 = bmp085_read_short(BMP085_AC3);
+	ac4 = bmp085_read_short(BMP085_AC4);
+	ac5 = bmp085_read_short(BMP085_AC5);
+	ac6 = bmp085_read_short(BMP085_AC6);
+	b1 = bmp085_read_short(BMP085_B1);
+	b2 = bmp085_read_short(BMP085_B2);
+	mb = bmp085_read_short(BMP085_MB);
+	mc = bmp085_read_short(BMP085_MC);
+	md = bmp085_read_short(BMP085_MD);
+	/*
+	vfd_cls();
+	sprintf(buff,"AC1=%02X B1=%02X MB=%02X",ac1,b1,mb);
+	vfd_puts(buff);
+	_delay_ms(5000);
+	*/
 }
 
+/*
 void bmp085_convert(u32 *temperature, u32 *pressure) {
 	long ut;
 	long up;
@@ -113,17 +122,17 @@ void bmp085_convert(u32 *temperature, u32 *pressure) {
 	x2 = (-7357 * p) >> 16;
 	*pressure = p + ((x1 + x2 + 3791) >> 4);
 }
-
+*/
 void bmp085_convert(long* temperature, long* pressure) {
     long ut;
 	long up;
 	long x1, x2, b5, b6, x3, b3, p;
 	unsigned long b4, b7;
-	
-	ut = bmp085ReadTemp();
-	ut = bmp085ReadTemp();	// some bug here, have to read twice to get good data
-	up = bmp085ReadPressure();
-	up = bmp085ReadPressure();
+	ut = bmp085_read_temp();
+	ut = bmp085_read_temp();	// some bug here, have to read twice to get good data
+	up = bmp085_read_pressure();
+	up = bmp085_read_pressure();
+
 	
 	x1 = ((long)ut - ac6) * ac5 >> 15;
 	x2 = ((long) mc << 11) / (x1 + md);
@@ -154,21 +163,22 @@ u08 bmp085_read_register(u08 reg) {
 	return device_data[0];
 }
 
-u16 bmp085_read_word(u08 reg) {
+int bmp085_read_word(u08 reg) {
 	device_data[0] = reg;
 	i2cMasterSendNI(BMP085_BASE_ADDRESS,1,&device_data);
+	_delay_ms(2);
 	i2cMasterReceiveNI(BMP085_BASE_ADDRESS,2,&device_data);
 	return (device_data[0] << 8) | device_data[1];
 }
 
 short bmp085_read_short(unsigned char address) {
-    char msb, lsb;
     device_data[0] = address;
     i2cMasterSendNI(BMP085_BASE_ADDRESS,1,&device_data);
-    i2cMasterReceiverNI(BMP085_BASE_ADDRESS,2,&device_data);
+    i2cMasterReceiveNI(BMP085_BASE_ADDRESS,2,&device_data);
     
-    short return_data = data[0] << 8;
-    return_data |= data[1]
+    short return_data = device_data[0] << 8;
+    return_data |= device_data[1];
+	return return_data;
 }
 
 long bmp085_read_temp() {
