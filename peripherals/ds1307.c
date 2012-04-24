@@ -9,21 +9,36 @@
 #include "../capabilities/i2c.h"
 #include "../common/global.h"
 
-#define DS1307_BASE_ADDRESS 0xD0
-#define CH (1<<7)
-#define HR (1<<6)
 #define SQWE	(1<<4);
 #define RS0	(1<<0);
 #define RS1	(1<<1);
+#define DS1307_BASE_ADDRESS 0xD0
+#define CH (1<<7)
+#define HR (1<<6)
 
 u08 device_data[2];
 
 u08 ds1307_read_register(u08 reg);
 void  ds1307_write_register(u08 reg,u08 data);
 
+u08 hour_mode;
+u08 ampm_mode;
+
+#define HOUR_24 0
+#define HOUR_12 1
+
 static unsigned int uint2bcd(unsigned int ival)
 {
 	return ((ival / 10) << 4) | (ival % 10);
+}
+char dec2bcd(char num)
+{
+  return ((num/10 * 16) + (num % 10));
+}
+// Convert Binary Coded Decimal (BCD) to Decimal
+char bcd2dec(char num)
+{
+  return ((num/16 * 10) + (num % 16));
 }
 
 void ds1307_init(DS1307HourMode mode)
@@ -65,21 +80,16 @@ u08 ds1307_minutes(void)
 
 u08 ds1307_hours(void)
 {
-	u08 hours_h, hours_l;
 	u08 hours = ds1307_read_register(DS1307_HOURS_ADDR);
-	if( hours & HR )
-	{
-		/*	24 hour mode, so mask the two upper bits */
-		hours &= ~(0b11000000);	
+	if( (hours & 0x40) == 0x40 ) {
+		//	12 hour mode
+		hour_mode = HOUR_12;
+		ampm_mode=(hours & 0x20) >> 5;   // ampm_mode: 0-AM, 1-PM
+		return bcd2dec(hours & 0x1F);
 	}
-	else
-	{
-		/* 12 hour mode so mask the upper three bits */
-		hours &= ~(0b11100000);
-	}
-	hours_h = hours >> 4;
-	hours_l = hours & 0b00001111;
-	return hours_h * 10 + hours_l;
+	hour_mode = HOUR_24;
+	ampm_mode = 0;
+	return bcd2dec(hours & 0x3F);
 }
 
 u08 ds1307_date(void)
@@ -111,21 +121,18 @@ void ds1307_set_minutes(u08 minutes)
 
 void ds1307_set_hours(u08 hours)
 {
-	u08 bcd_hours = uint2bcd(hours);
-	/*	make sure upper bit is clear */
-	bcd_hours &= ~(1<<7);
-	u08 current_hours = ds1307_hours();
-	if( hours & HR )
-	{
-		/*	24 hour mode so set the HR bit in bcd_hours */
-		bcd_hours |= HR;
+	u08 hour_format = dec2bcd(hours);
+	if( hour_mode ) {
+		hour_format |= (1 << 6);
+   	     if (ampm_mode)
+	       hour_format |= (1 << 5);
+         else
+	       hour_format &= ~(1 << 5);
 	}
-	else
-	{
-		/* 12 hour mode so clear the HR bit in bcd_hours */
-		bcd_hours &= ~HR;
+	else {
+		hour_format &= ~(1 << 6);
 	}
-	ds1307_write_register(DS1307_HOURS_ADDR,bcd_hours);
+	ds1307_write_register(DS1307_HOURS_ADDR,hour_format);
 }
 
 void ds1307_set_year(u08 year)
