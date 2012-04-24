@@ -6,10 +6,13 @@
  */ 
 
 #include <util/delay.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "../capabilities/i2c.h"
 #include "../common/global.h"
 #include "../common/pindefs.h"
 #include "bmp085.h"
+#include "../capabilities/vfd.h"
 
 #define BMP085_BASE_ADDRESS 0xEE
 
@@ -89,40 +92,6 @@ void bmp085_read_calibration_data() {
 	*/
 }
 
-/*
-void bmp085_convert(u32 *temperature, u32 *pressure) {
-	long ut;
-	long up;
-	long x1, x2, b5, b6, x3, b3, p;
-	unsigned long b4, b7;
-	
-	ut = bmp085_read_temp();
-	ut = bmp085_read_temp();
-	up = bmp085_read_pressure();
-	up = bmp085_read_pressure();
-	
-	x1 = ((long)ut - bmp085_ac6) * bmp085_ac5 >> 15;
-	x2 = ((long) bmp085_mc << 11) / (x1 + bmp085_md);
-	b5 = x1 + x2;
-	*temperature = (b5 + 8) >> 4;
-	
-	b6 = b5 - 4000;
-	x1 = (bmp085_b2 * (b6 * b6 >> 12)) >> 11;
-	x2 = bmp085_ac2 * b6 >> 11;
-	x3 = x1 + x2;
-	b3 = (((int32_t) bmp085_ac1 * 4 + x3) + 2)/4;
-	x1 = bmp085_ac3 * b6 >> 13;
-	x2 = (bmp085_b1 * (b6 * b6 >> 12)) >> 16;
-	x3 = ((x1 + x2) + 2) >> 2;
-	b4 = (bmp085_ac4 * (unsigned long) (x3 + 32768)) >> 15;
-	b7 = ((unsigned long) up - b3) * (50000 >> OSS);
-	p = b7 < 0x80000000 ? (b7 * 2) / b4 : (b7 / b4) * 2;
-	x1 = (p >> 8) * (p >> 8);
-	x1 = (x1 * 3038) >> 16;
-	x2 = (-7357 * p) >> 16;
-	*pressure = p + ((x1 + x2 + 3791) >> 4);
-}
-*/
 void bmp085_convert(long* temperature, long* pressure) {
     long ut;
 	long up;
@@ -203,35 +172,3 @@ long bmp085_read_pressure(void) {
 	
 	return p;
 }
-
-/*
-u32 bmp085_read_temp() {
-	//	begin temperature conversion
-	device_data[0] = BMP085_CTL;
-	device_data[1] = BMP085_TEMP;
-	i2cMasterSendNI(BMP085_BASE_ADDRESS,2,&device_data);
-	//	wait until conversion is complete
-	while( !(PIN(BMP085_EOC_PORT) & BMP085_EOC_PIN) )
-		;
-	device_data[0] = BMP085_RSLT;
-	i2cMasterSendNI(BMP085_BASE_ADDRESS,1,&device_data);
-	i2cMasterReceiveNI(BMP085_BASE_ADDRESS,2,&device_data);
-	return (device_data[0] << 8) | device_data[1];
-}
-
-
-u32 bmp085_read_pressure() {
-	//	begin temperature conversion
-	device_data[0] = BMP085_CTL;
-	device_data[1] = BMP085_P0;
-	i2cMasterSendNI(BMP085_BASE_ADDRESS,2,&device_data);
-	//	wait until conversion is complete
-	while( !(PIN(BMP085_EOC_PORT) & BMP085_EOC_PIN) )
-		;
-	device_data[0] = BMP085_RSLT;
-	i2cMasterSendNI(BMP085_BASE_ADDRESS,1,&device_data);
-	i2cMasterReceiveNI(BMP085_BASE_ADDRESS,2,&device_data);
-	u16 pressure = (device_data[0] << 8) | device_data[1];
-	return pressure & 0x0000FFFF;
-}
-*/
