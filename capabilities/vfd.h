@@ -20,7 +20,7 @@
 
 #define VFD_LINES           2
 #define VFD_DISP_LENGTH     20
-#define VFD_PORT            PORTE
+#define VFD_PORT            PORTA
 #define VFD_DATA0_PORT      VFD_PORT
 #define VFD_DATA1_PORT      VFD_PORT
 #define VFD_DATA2_PORT      VFD_PORT
@@ -41,7 +41,7 @@
 
 
 /*      CONTROL PORTS/PINS */
-#define VFD_CTL_PORT        PORTD
+#define VFD_CTL_PORT        PORTF
 #define VFD_CS_PORT			VFD_CTL_PORT
 #define VFD_CS_PIN			2
 #define VFD_A0_PORT			VFD_CTL_PORT

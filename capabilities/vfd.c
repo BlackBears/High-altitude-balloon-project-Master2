@@ -136,3 +136,4 @@ void _vfd_write(uint8_t data, command_or_data cmd)
     _delay_ms(1);
     vfd_wr_high();
 }
+
