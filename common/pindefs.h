@@ -21,6 +21,16 @@
 #define OPEN_LOG_RESET_PORT		OPEN_LOG_CONTROL_PORT
 #define OPEN_LOG_RESET_PIN		5
 
+/*  CUTDOWN CONTROLLER */
+#warning These need to be confirmed
+#define CUTDOWN_CONTROL_PORT    PORTD
+#define CUTDOWN_CONTROL_PIN     4
+
+/*  BATTERY WARMER */
+#warning These need to be confirmed
+#define BAT_WARMER_PORT         PORTB
+#define BAT_WARMER_PIN          3
+
 #define RTC_1HZ_INT	7	//	the RTC 1Hz signal will interrupt on INT7
 
 
