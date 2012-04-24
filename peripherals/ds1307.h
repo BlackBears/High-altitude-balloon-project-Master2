@@ -42,7 +42,6 @@ void ds1307_set_seconds(u08 seconds);
 void ds1307_set_minutes(u08 minutes);
 void ds1307_set_hours(u08 hours);
 void ds1307_set_year(u08 year);
-void ds1307_sqw_enable(BOOL state);
 void ds1307_sqw_set_mode(ds1307_sqw_mode_t mode);
 
 #endif /* DS1307_H_ */
