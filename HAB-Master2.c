@@ -14,6 +14,7 @@
 #include "capabilities/i2c.h"
 #include "peripherals/openlog.h"
 #include "peripherals/ds1307.h"
+#include "peripherals/warmers/warmer.h"
 #include "sensors/bmp085.h"
 #include "sensors/tmp102.h"
 #include "common/types.h"
@@ -23,6 +24,7 @@
 
 flight_status_t flight_status;
 char buffer[20];
+warmer_t battery_warmer;
 
 /*	FUNCTION PROTOTYPES	*/
 
@@ -37,6 +39,12 @@ int main(void)
 	bmp085_init();
 	
 	_init_rtc();
+	warmer_init();
+	
+	battery_warmer.adc_channel = 4;
+	battery_warmer.min_temp = 10;
+	battery_warmer.max_temp = 15;
+	battery_warmer.type = k_warmer_battery;
 	
 	_delay_ms(1000);
 	vfd_cls();
@@ -44,7 +52,9 @@ int main(void)
 	vfd_puts(buffer);
 	_delay_ms(1000);
 	
+
 	vfd_cls();
+	/*
 	sprintf(buffer,"Initializing Open Log");
 	vfd_puts(buffer);
 	open_log_init();
@@ -59,6 +69,7 @@ int main(void)
 	vfd_puts(buffer);
 	open_log_write_test();
 	_delay_ms(2000);
+	*/
     while(1)
     {
 		u08 hour = ds1307_hours();
@@ -81,6 +92,12 @@ int main(void)
 		vfd_puts(buffer);
 		vfd_cr();
 		sprintf(buffer,"T = %ld x10C",bt);
+		vfd_puts(buffer);
+		_delay_ms(1000);
+		vfd_cls();
+		
+		warmer_read_temp(&battery_warmer);
+		sprintf(buffer,"BAT = %02d C",battery_warmer.current_temp);
 		vfd_puts(buffer);
 		_delay_ms(1000);
 		vfd_cls();
