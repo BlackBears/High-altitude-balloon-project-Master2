@@ -10,10 +10,14 @@
 #include "openlog.h"
 #include "../common/pindefs.h"
 #include "../capabilities/uart.h"
+#include "../capabilities/vfd.h"
 #include <avr/io.h>
 #include <util/delay.h>
 
 #define ASCII_SUB 0x1A
+
+void _open_log_wait_cmd_ack();
+void _open_log_wait_log_ack();
 
 void open_log_init(void) {
 	int baud = (UBRRH_VALUE << 8) | UBRRL_VALUE;
@@ -41,16 +45,26 @@ void open_log_set_pwr(BOOL pwr_state) {
 
 void open_log_write_test(void) {
 	open_log_reset();
-	open_log_command_mode();
-	char ack;
+	vfd_cls();	vfd_puts("Will go cmd");
+	_delay_ms(1000);
+	open_log_command_mode();				//	put in command mode and wait until ack
+	vfd_cls(); vfd_puts("Finished cmd");
+	_delay_ms(1000);
 	#if OPEN_LOG_UART == UART0
-		uart_puts("new temps.txt\r");
-		while(1) {
-			ack = uart_getc();
-			if( ack == '>' ) { break; }
-		}
-		uart_puts("append temps.txt\r");
-		uart_puts("Hello World!\r");
+		uart_puts("rm temp01.txt");
+		_delay_ms(10);
+		//_open_log_wait_cmd_ack();
+		vfd_cls();	vfd_puts("Removed old temp01");
+		_delay_ms(1000);
+		uart_puts("new temps01.txt\r");		//	create new file
+		//_open_log_wait_cmd_ack();			//	for cmd (">") acknowledgement
+		_delay_ms(10);
+		vfd_cls();	vfd_puts("Created new temp01");
+		_delay_ms(1000);
+		uart_puts("append temps01.txt\r");
+		//_open_log_wait_log_ack();			//	for log ("<") acknowledgement
+		_delay_ms(10);
+		uart_puts("Hello World!\r");		//	log something
 	#else
 		uart1_puts("new temps.txt\r");
 		while(1) {
@@ -64,24 +78,42 @@ void open_log_write_test(void) {
 }
 
 void open_log_command_mode() {
-	#if OPEN_LOG_UART == UART0
+#if OPEN_LOG_UART == UART0
 		uart_putc(ASCII_SUB);
 		uart_putc(ASCII_SUB);
 		uart_putc(ASCII_SUB);
-		char ack;
-		while(1) {
-			ack = uart_getc();
-			if( ack == '>' ) { break; }
-		}
-	#else	
+		_delay_ms(10);
+		//_open_log_wait_cmd_ack();
+#else	
 		uart1_putc(ASCII_SUB);
 		uart1_putc(ASCII_SUB);
 		uart1_putc(ASCII_SUB);
-		while(1) {
-			ack = uart1_getc();
-			if( ack == '>' ) { break; }
-		}
-	#endif
+		_open_log_wait_cmd_ack();
+#endif
+}
+
+void _open_log_wait_cmd_ack() {
+	char ack;
+	while(1) {
+#if OPEN_LOG_UART == UART0
+		ack = uart_getc();
+#else
+		ack = uart1_getc();
+#endif
+		if( ack == '>' ) { break; }
+	}
+}
+
+void _open_log_wait_log_ack() {
+	char ack;
+	while(1) {
+		#if OPEN_LOG_UART == UART0
+		ack = uart_getc();
+		#else
+		ack = uart1_getc();
+		#endif
+		if( ack == '<' ) { break; }
+	}
 }
 
 void open_log_reset() {
