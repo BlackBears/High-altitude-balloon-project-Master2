@@ -25,6 +25,8 @@
 flight_status_t flight_status;
 char buffer[20];
 warmer_t battery_warmer;
+volatile tmp102_t internal_temperature;
+volatile tmp102_t external_temperature;
 
 /*	FUNCTION PROTOTYPES	*/
 
@@ -70,6 +72,9 @@ int main(void)
 	open_log_write_test();
 	_delay_ms(2000);
 	*/
+	internal_temperature.address = k_tmp102_addr0_gnd;
+	external_temperature.address = k_tmp102_addr0_vcc;
+	
     while(1)
     {
 		u08 hour = ds1307_hours();
@@ -78,12 +83,33 @@ int main(void)
 		sprintf(buffer,"%02d:%02d:%02d",hour,minute,second);
 		vfd_cls();
 		vfd_puts(buffer);
-		s16 tmp1 = tmp102_read_temp(k_tmp102_addr0_gnd);
-		s16 ext_temp = tmp102_read_temp(k_tmp102_addr0_vcc);
+
+		tmp102_read_temp(&internal_temperature);
+		tmp102_read_temp(&external_temperature);
 		vfd_cr();
-		sprintf(buffer,"TMP1 = %02dC EXT = %02dC",tmp1,ext_temp);
-		vfd_puts(buffer);
-		_delay_ms(1000);
+		//s16 tmp1 = tmp102_read_temp(k_tmp102_addr0_gnd);
+		//s16 ext_temp = tmp102_read_temp(k_tmp102_addr0_vcc);
+		if( internal_temperature.is_valid ) {
+			sprintf(buffer,"TI = %02dC",internal_temperature.temperature);
+			vfd_puts(buffer);
+		}
+		else {
+			sprintf(buffer,"TI ABSENT");
+			vfd_puts(buffer);
+		}
+		if( external_temperature.is_valid ) {
+			sprintf(buffer," TE = %02dC",external_temperature.temperature);
+			vfd_puts(buffer);
+		}
+		else {
+			sprintf(buffer," TE ABSENT");
+			vfd_puts(buffer);
+		}
+		//vfd_cls(); sprintf(buffer,"Read temps"); vfd_puts(buffer);
+		
+		//sprintf(buffer,"TMP1 = %02dC EXT = %02dC",tmp1,ext_temp);
+		//vfd_puts(buffer);
+		_delay_ms(2000);
 		vfd_cls();
 		
 		long bp, bt;
