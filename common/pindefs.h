@@ -9,6 +9,19 @@
 #ifndef PINDEFS_H_
 #define PINDEFS_H_
 
+/*  POWER PINS  */
+#define BMP085_PWR_PORT     PORTC
+#define BMP085_PWR_PIN      1
+#define EXT_TEMP_PWR_PORT   PORTC
+#define EXT_TEMP_PWR_PIN    2
+#define INT_TEMP_PWR_PORT   PORTC
+#define INT_TEMP_PWR_PIN    3
+#define ACCEL_PWR_PORT      PORTC
+#define ACCEL_PWR_PIN       4
+#define GPS_PWR_PORT        PORTC
+#define GPS_PWR_PIN         5
+
+
 /*	BMP085 temperature and pressure sensor */
 
 #define BMP085_EOC_PORT	PORTC

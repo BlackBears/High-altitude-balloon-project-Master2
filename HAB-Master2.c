@@ -15,6 +15,8 @@
 #include "peripherals/openlog.h"
 #include "peripherals/ds1307.h"
 #include "peripherals/warmers/warmer.h"
+#include "peripherals/warmers/warmer_output.h"
+#include "peripherals/warmers/warmer_timing.h"
 #include "sensors/bmp085.h"
 #include "sensors/tmp102.h"
 #include "common/types.h"
@@ -145,6 +147,12 @@ void _init_rtc(void) {
 	//EICRB &= ~(1<<ISC71);
 	//EIMSK |= (1<<INT7);
 	//sei();
+}
+
+void _init_warmers(void) {
+    warmer_controller_init();   // init a2d and pid params for warmers
+    warmer_setup();             // initiate warmer(s), defined in warmer_output.h
+    warmer_timing_setup();      // setup 64Hz interrupt on TIMER1, def in warmer_timing.h
 }
 
 /*	EXTERNAL INTERRUPTS	*/
