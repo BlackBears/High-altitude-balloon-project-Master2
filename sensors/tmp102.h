@@ -11,6 +11,8 @@
 
 #include "../common/global.h"
 
+#define TMP102_INVALID_TEMP	0x0FFF
+
 enum {
 	k_tmp102_addr0_gnd = 0x90,
 	k_tmp102_addr0_vcc = 0x92,
@@ -19,6 +21,12 @@ enum {
 };
 typedef u08 tmp102_addr_t;
 
-s16 tmp102_read_temp(tmp102_addr_t address);
+typedef struct {
+	tmp102_addr_t address;
+	s16 temperature;
+	BOOL is_valid;
+} tmp102_t;
+
+void tmp102_read_temp(volatile tmp102_t *device);
 
 #endif /* TMP102_H_ */

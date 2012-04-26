@@ -8,20 +8,34 @@
 #include "tmp102.h"
 #include "../common/global.h"
 #include "../capabilities/i2c.h"
+#include "../capabilities/vfd.h"
+#include <util/delay.h>
 
 #define TMP102_BASE_ADDRESS 0x90	//	assumes ADR0 is tied to GND
 
-#define TMP102_TEMP_REG	0x00
+#define TMP102_TEMP_REG		0x00
 #define TMP102_CONFIG_REG	0x01
 #define TMP102_LOW_REG		0x02
 #define TMP102_HIGH_REG		0x03
 
-s16 tmp102_read_temp(tmp102_addr_t address) {
+void tmp102_read_temp(volatile tmp102_t *device) {
 	u08 data[2];
 	data[0] = TMP102_TEMP_REG;
-	i2cMasterSendNI(address,1,&data);
-	i2cMasterReceiveNI(address,2,&data);
+	u08 retval = i2cMasterSendNI(device->address,1,&data);
+	if( retval != I2C_OK ) { 
+		device->is_valid = FALSE;
+		device->temperature = TMP102_INVALID_TEMP;
+		return;
+	}
+	_delay_ms(5);
+	retval = i2cMasterReceiveNI(device->address,2,&data);
+	if( retval != I2C_OK ) { 
+		device->is_valid = FALSE;
+		device->temperature = TMP102_INVALID_TEMP;
+		return;
+	}
 	
+	device->is_valid = TRUE;
 	u08 msb,lsb;
 	msb = data[0];
 	lsb = data[1];
@@ -40,5 +54,5 @@ s16 tmp102_read_temp(tmp102_addr_t address) {
 	//Shifts may not work with signed ints (negative temperatures). Let's do a divide instead
 	temp /= 16;
 
-	return(temp);
+	device->temperature = temp;
 }
