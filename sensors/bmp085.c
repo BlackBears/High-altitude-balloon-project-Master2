@@ -38,6 +38,7 @@
 
 #define OSS 0	// Oversampling Setting (note: code is not set up to use other OSS values)
 
+BOOL device_error;
 u08 device_data[2];
 char buff[20];
 
@@ -64,12 +65,25 @@ long bmp085_read_temp();
 //u32 bmp085_read_pressure();
 long bmp085_read_pressure(void);
 
-void bmp085_init() {
-	//	configure EOC pin as input
-	//DDR(BMP085_EOC_PORT) &= ~(1<<BMP085_EOC_PIN);
+void bmp085_init(bmp085_t *device) {
+    device->status.status = k_peripheral_status_indeterminate;
+    device->status.connect_attempts = 0;
+    device_error = FALSE;
 	DDR(BMP085_EOC_PORT) = 0b11111110;
 	
 	bmp085_read_calibration_data();
+	if( device_error ) {
+	    device->is_valid = FALSE;
+	}
+}
+
+void bmp085_pwr_set(bmp085_t *device, BOOL pwr_state) {
+    DDR(BMP085_PWR_PORT) |= (1<<BMP085_PWR_PIN);
+    if( pwr_state )
+        BMP085_PWR_PORT |= (1<<BMP085_PWR_PIN);
+    else
+        BMP085_PWR_PORT &= ~(1<<BMP085_PWR_PIN);
+    device->status.power = (pwr_status)?PWR_ON:PWR_OFF;
 }
 
 void bmp085_read_calibration_data() {
@@ -79,34 +93,35 @@ void bmp085_read_calibration_data() {
 	ac4 = bmp085_read_short(BMP085_AC4);
 	ac5 = bmp085_read_short(BMP085_AC5);
 	ac6 = bmp085_read_short(BMP085_AC6);
-	b1 = bmp085_read_short(BMP085_B1);
-	b2 = bmp085_read_short(BMP085_B2);
-	mb = bmp085_read_short(BMP085_MB);
-	mc = bmp085_read_short(BMP085_MC);
-	md = bmp085_read_short(BMP085_MD);
-	/*
-	vfd_cls();
-	sprintf(buff,"AC1=%02X B1=%02X MB=%02X",ac1,b1,mb);
-	vfd_puts(buff);
-	_delay_ms(5000);
-	*/
+	b1  = bmp085_read_short(BMP085_B1);
+	b2  = bmp085_read_short(BMP085_B2);
+	mb  = bmp085_read_short(BMP085_MB);
+	mc  = bmp085_read_short(BMP085_MC);
+	md  = bmp085_read_short(BMP085_MD);
 }
 
-void bmp085_convert(long* temperature, long* pressure) {
+void bmp085_convert(bmp085_t *device) {
     long ut;
 	long up;
 	long x1, x2, b5, b6, x3, b3, p;
 	unsigned long b4, b7;
+	device_error = FALSE:
 	ut = bmp085_read_temp();
 	ut = bmp085_read_temp();	// some bug here, have to read twice to get good data
 	up = bmp085_read_pressure();
 	up = bmp085_read_pressure();
-
+	
+	//  check for error
+	if( device_error ) {
+	    device->is_valid = FALSE;
+	    return;
+	}
+    device->is_valid = TRUE;
 	
 	x1 = ((long)ut - ac6) * ac5 >> 15;
 	x2 = ((long) mc << 11) / (x1 + md);
 	b5 = x1 + x2;
-	*temperature = (b5 + 8) >> 4;
+	device->temperature = (b5 + 8) >> 4;
 	
 	b6 = b5 - 4000;
 	x1 = (b2 * (b6 * b6 >> 12)) >> 11;
@@ -122,7 +137,7 @@ void bmp085_convert(long* temperature, long* pressure) {
 	x1 = (p >> 8) * (p >> 8);
 	x1 = (x1 * 3038) >> 16;
 	x2 = (-7357 * p) >> 16;
-	*pressure = p + ((x1 + x2 + 3791) >> 4);
+	device->pressure = p + ((x1 + x2 + 3791) >> 4);
 }
 
 u08 bmp085_read_register(u08 reg) {
@@ -142,9 +157,11 @@ int bmp085_read_word(u08 reg) {
 
 short bmp085_read_short(unsigned char address) {
     device_data[0] = address;
-    i2cMasterSendNI(BMP085_BASE_ADDRESS,1,&device_data);
-    i2cMasterReceiveNI(BMP085_BASE_ADDRESS,2,&device_data);
-    
+    u08 i2c_status = i2cMasterSendNI(BMP085_BASE_ADDRESS,1,&device_data);
+    if( u08 != I2C_OK ) {
+        device_error = TRUE;
+        return 0x00;
+    }   
     short return_data = device_data[0] << 8;
     return_data |= device_data[1];
 	return return_data;
@@ -164,7 +181,6 @@ long bmp085_read_pressure(void) {
 	device_data[0] = BMP085_CTL;
 	device_data[1] = BMP085_P0;
 	i2cMasterSendNI(BMP085_BASE_ADDRESS,2,&device_data);
-	
 	_delay_ms(10);
 	long p = 0;
 	p = bmp085_read_short(BMP085_RSLT);
