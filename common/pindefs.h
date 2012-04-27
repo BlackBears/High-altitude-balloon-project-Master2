@@ -10,17 +10,24 @@
 #define PINDEFS_H_
 
 /*  POWER PINS  */
-#define BMP085_PWR_PORT     PORTC
-#define BMP085_PWR_PIN      1
-#define EXT_TEMP_PWR_PORT   PORTC
-#define EXT_TEMP_PWR_PIN    2
-#define INT_TEMP_PWR_PORT   PORTC
-#define INT_TEMP_PWR_PIN    3
-#define ACCEL_PWR_PORT      PORTC
-#define ACCEL_PWR_PIN       4
-#define GPS_PWR_PORT        PORTC
-#define GPS_PWR_PIN         5
+#define PWR_CTL_PORT        PORTA
+#define BMP085_PWR_PORT     PWR_CTL_PORT
+#define BMP085_PWR_PIN      3
+#define EXT_TEMP_PWR_PORT   PWR_CTL_PORT
+#define EXT_TEMP_PWR_PIN    5
+#define INT_TEMP_PWR_PORT   PWR_CTL_PORT
+#define INT_TEMP_PWR_PIN    4
+#define ACCEL_PWR_PORT      PWR_CTL_PORT
+#define ACCEL_PWR_PIN       7
+#define GPS_PWR_PORT        PWR_CTL_PORT
+#define GPS_PWR_PIN         6
 
+/*  SERIAL MULTIPLEXER */
+#define SERIAL_MUX_PORT     PORTD
+#define SERIAL_MUX_A_PORT   SERIAL_MUX_PORT
+#define SERIAL_MUX_A_PIN    4
+#define SERIAL_MUX_B_PORT   SERIAL_MUX_PORT
+#define SERIAL_MUX_B_PIN    5
 
 /*	BMP085 temperature and pressure sensor */
 
