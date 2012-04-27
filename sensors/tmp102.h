@@ -10,6 +10,7 @@
 #define TMP102_H_
 
 #include "../common/global.h"
+#include "../common/states.h"
 
 #define TMP102_INVALID_TEMP	0x0FFF
 
@@ -21,12 +22,21 @@ enum {
 };
 typedef u08 tmp102_addr_t;
 
+enum {
+    k_tmp102_loc_internal;
+    k_tmp102_loc_external;
+};
+typedef u08 tmp102_location_t;
+
 typedef struct {
 	tmp102_addr_t address;
+	tmp102_location_t location;
 	s16 temperature;
 	BOOL is_valid;
+	sensor_status_t status;
 } tmp102_t;
 
+void tmp102_set_pwr(volatile tmp102_t *device, BOOL pwr_status);
 void tmp102_read_temp(volatile tmp102_t *device);
 
 #endif /* TMP102_H_ */

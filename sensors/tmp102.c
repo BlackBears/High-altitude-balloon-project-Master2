@@ -18,6 +18,25 @@
 #define TMP102_LOW_REG		0x02
 #define TMP102_HIGH_REG		0x03
 
+
+void tmp102_set_pwr(volatile tmp102_t *device, BOOL pwr_status) {
+    if( device->location == k_tmp102_loc_internal ) {
+        DDR(INT_TEMP_PWR_PORT) |= (1<<INT_TEMP_PWR_PIN);
+        if( pwr_status )
+            INT_TEMP_PWR_PORT |= (1<<INT_TEMP_PWR_PIN);
+        else
+            INT_TEMP_PWR_PORT &= ~(1<<INT_TEMP_PWR_PIN);
+    }
+    else {
+        DDR(EXT_TEMP_PWR_PORT) |= (1<<EXT_TEMP_PWR_PIN);
+        if( pwr_status )
+            EXT_TEMP_PWR_PORT |= (1<<EXT_TEMP_PWR_PIN);
+        else
+            EXT_TEMP_PWR_PORT &= ~(1<<EXT_TEMP_PWR_PIN);
+    }
+    device->status.power = (pwr_status)?PWR_ON:PWR_OFF;
+}
+
 void tmp102_read_temp(volatile tmp102_t *device) {
 	u08 data[2];
 	data[0] = TMP102_TEMP_REG;
