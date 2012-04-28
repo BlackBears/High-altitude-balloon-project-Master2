@@ -10,6 +10,7 @@
 #include "common/global.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/wdt.h>
 #include <util/delay.h>
 #include <util/setbaud.h>
 #include <stdio.h>
@@ -29,18 +30,23 @@
 #include "common/states.h"
 #include "capabilities/vfd.h"
 
+/************************************************************************/
+/* GLOBAL VARIABLES                                                     */
+/************************************************************************/
 flight_status_t flight_status;
 time_t rtc;
-char buffer[20];
+char buffer[60];
 u08 last_second;                        //  used to track 1Hz tasks
 warmer_t battery_warmer;
-volatile tmp102_t internal_temperature;
-volatile tmp102_t external_temperature;
-volatile bmp085_t bmp085;
+tmp102_t internal_temperature;
+tmp102_t external_temperature;
+bmp085_t bmp085;
+long temperature, pressure;
 
 
-
-/*	FUNCTION PROTOTYPES	*/
+/************************************************************************/
+/* FUNCTION PROTOTYPES                                                  */
+/************************************************************************/
 
 void init(void);
 void _init_rtc(void);
@@ -56,8 +62,6 @@ int main(void)
     
 	i2cInit();          //  initialize the I2C bus
 	_delay_ms(10);      //  wait until stabilizes
-	vfd_init();         //  init our display
-	bmp085_init();      //  init the barometric pressure sensor
 	
 	mux_init();         //  setup UART1 & set terminal as output
 	flight_status.serial_channel = k_serial_out_terminal;
@@ -65,34 +69,61 @@ int main(void)
 	uart_init(baud_rate);
 	uart1_init(baud_rate);
 	
-	_init_rtc();        //  initialize our clock
-	warmer_init();      //  initialize the warmers
+	//	show welcome message
+	uart1_putc(0x0C);	//	?cls
+	sprintf(buffer,"Welcome to HAB!\r");
+	uart1_puts(buffer);
+
+	/*////////////////////////////////////////////////////////////////////////
+	/	I2C bus initialization
+	/	Note that for unclear reasons, the BMP085 must be initialized first
+	/	followed by the TMP102 sensors.
+	/////////////////////////////////////////////////////////////////////////*/
+	i2cInit();          //  initialize the I2C bus
+	_delay_ms(10);      //  wait until stabilizes
+	_init_bmp085();     //  init the barometric pressure sensor
+	_delay_ms(5);
+	_init_tmp102();		//	init the temperature monitors
+	_delay_ms(5);
+	_init_rtc();		//  initialize our clock
+	warmer_controller_init();      //  initialize the warmers
 	
 	battery_warmer.adc_channel = 4;
 	battery_warmer.min_temp    = 10;
 	battery_warmer.max_temp    = 15;
 	battery_warmer.type = k_warmer_battery;
 	
-	_delay_ms(1000);
-	vfd_cls();
-	sprintf(buffer,"Welcome to HAB!");
-	vfd_puts(buffer);
+	_delay_ms(100);
+	
 	_delay_ms(1000);
 	
-
-	vfd_cls();
     while(1)
     {
-        read_rtc();
-        if( rtc.second != last_second ) {
+		if( rtc.new_second ) {
+			rtc.new_second = FALSE;
             last_second = rtc.second;       //  reset our last_second
             
             //  do 1 Hz processing here
             read_sensors();
-        }	
+			report_enviro();
+        }
+		//sprintf(buffer,"%02d:%02d:%02d\r",rtc.hour,rtc.minute,rtc.second);
+		//uart1_puts(buffer);
+		_delay_ms(200);
+	}			
 }
 
-/*	INITIALIZATION	*/
+/************************************************************************/
+/* INITIALIZATION                                                       */
+/************************************************************************/
+
+void _init_watchdog_timer(void) {
+	cli();
+	wdt_reset();
+	WDTCR |= (1<<WDP2) | (1<<WDP1);
+	WDTCR |= (1<<WDE) | (1<<WDCE);
+	sei();
+}
 void _init_rtc(void) {
 	ds1307_init(kDS1307Mode24HR);
 	ds1307_sqw_set_mode(k_ds1307_sqw_mode_a);
@@ -100,13 +131,13 @@ void _init_rtc(void) {
 	//ds1307_set_hours(06);
 	//ds1307_set_minutes(11);
 	//ds1307_set_seconds(40);
-	DDRD |= (1<<PD7);
-
-	//PORTE &= ~(1<<PE7);
-	//EICRB &= ~(1<<ISC70);
-	//EICRB &= ~(1<<ISC71);
-	//EIMSK |= (1<<INT7);
-	//sei();
+#if RTC_1HZ_INT == 7
+	PORTE &= ~(1<<PE7);
+	EICRB &= ~(1<<ISC70);
+	EICRB &= ~(1<<ISC71);
+	EIMSK |= (1<<INT7);
+	sei();
+#endif
 }
 
 void _init_warmers(void) {
@@ -116,8 +147,10 @@ void _init_warmers(void) {
 }
 
 void _init_bmp085(void) {
+	uart1_puts("Will init bmp085 from main\r");
     bmp085_pwr_set(&bmp085, TRUE);  //  power on
     _delay_ms(20);                  //  wait to stabilize a bit
+	uart1_puts("Will call bmp085 initialization\r");
     bmp085_init(&bmp085);           //  initialize
     
     //  if unable to read calibration values, note error status for flight
@@ -131,27 +164,43 @@ void _init_bmp085(void) {
 
 void _init_tmp102(void) {
     //  setup our internal and external temp sensors
-    internal_temperature.address = k_tmp102_addr0_gnd;
-	internal_temperature.location = k_tmp102_loc_internal;
-	external_temperature.address = k_tmp102_addr0_vcc;
-	external_temperature.location = k_tmp102_loc_external;
+    internal_temperature.address = TMP102_ADDR_GND;
+	internal_temperature.location = TMP102_LOC_INT;
+	external_temperature.address = TMP102_ADDR_VCC;
+	external_temperature.location = TMP102_LOC_EXT;
+	//sprintf(buffer,"main: ET ADDR = %02X\r",external_temperature.address);
+	//uart1_puts(buffer);
 	
 	//  power them up
-    tmp102_set_pwr(&internal_temperature);
-    tmp102_set_pwr(&external_temperature);
+    tmp102_set_pwr(&internal_temperature,TRUE);
+	_delay_ms(20);
+    tmp102_set_pwr(&external_temperature,TRUE);
     
     //  set our sensor status
-    internal_temperature.connect_attempts = 0;
-    external_temperature.connect_attempts = 0;
+    internal_temperature.status.connect_attempts = 0;
+    external_temperature.status.connect_attempts = 0;
 }
 
 /*  READ SENSORS */
 
+#define FAULT_TOLERANT 1
+#define NOT_FAULT_TOLERANT 0
+#define FAULT_TOLERANCE_MODE NOT_FAULT_TOLERANT
+
 void read_sensors(void) {
+	tmp102_read_temp(&external_temperature);    // read ext temperature
+	tmp102_read_temp(&internal_temperature);
+	
+	bmp085Convert(&temperature, &pressure);
+	
+	/*
+#if FAULT_TOLERANCE_MODE == FAULT_TOLERANT
     //  read internal temperature, if invalid, keep trying for 30s
     //  after 30s power it down to conserve power
     if( internal_temperature.status.power ) {
         tmp102_read_temp(&internal_temperature);    // read int temperature
+		//sprintf(buffer,"IT = %02dC\r",internal_temperature.temperature);
+		//uart1_puts(buffer);
         if( !internal_temperature.is_valid ) {
             u08 attempts = internal_temperature.status.connect_attempts;
             attempts++;
@@ -167,11 +216,21 @@ void read_sensors(void) {
             internal_temperature.status.connect_attempts = 0;
         }
     }
-    
+	else {
+		uart1_puts("IT is not powered\r");	
+	}		
+#else
+	tmp102_read_temp(&internal_temperature);
+#endif
+    _delay_ms(20);
+	
+#if FAULT_TOLERANCE_MODE == FAULT_TOLERANT
     //  read external temperature.  if invalid, keep trying for 30s
     //  after 30s, power it down to converse power
-    if( external_temperaturel.status.power ) {
+    if( external_temperature.status.power ) {
         tmp102_read_temp(&external_temperature);    // read ext temperature
+		//sprintf(buffer,"ET = %02dC\r",external_temperature.temperature);
+		//uart1_puts(buffer);
         if( !external_temperature.is_valid ) {
             u08 attempts = external_temperature.status.connect_attempts;
             attempts++;
@@ -186,7 +245,13 @@ void read_sensors(void) {
             external_temperature.status.connect_attempts = 0;
         }
     }
-    
+	else {
+		uart1_puts("ET is not powered\r");	
+	}		
+#else
+	tmp102_read_temp(&external_temperature);
+#endif
+    _delay_ms(20);
     //  read barometric pressure if the sensor is powered
     if( bmp085.status.power ) {
         bmp085_convert(&bmp085);                    // read pressure
@@ -196,7 +261,7 @@ void read_sensors(void) {
             if( attempts >= 30 ) {
                 //  power down the barometric pressure sensor
                 //  if connect attempts exceed threshold
-                bmp085_set_pwr(&bmp085,FALSE);
+                bmp085_pwr_set(&bmp085,FALSE);
                 bmp085.status.status = k_peripheral_status_error;
             }
         }
@@ -204,28 +269,45 @@ void read_sensors(void) {
             bmp085.status.status = k_peripheral_status_ok;
             bmp085.status.connect_attempts = 0;
         }
-    }		    
-}
+    }	
+	else {
+		uart1_puts("BMP085 is not powered\r");
+	}	    
+	*/
 }
 
-/*  TIME    */
-
+/************************************************************************/
+/* TIMEKEEPING                                                          */
+/************************************************************************/
 void read_rtc(void) {
     rtc.hour = ds1307_hours();
     rtc.minute = ds1307_minutes();
     rtc.second = ds1307_seconds();
 }
 
-/*  REPORTING */
+/************************************************************************/
+/* REPORTING                                                            */
+/************************************************************************/
 
 //
 //  send environmental data to whichever UART1 vector is active
 //  
-void report_enviro {
+void report_enviro(void) {
     //  format report differently depending on output vector
     if( flight_status.serial_channel != k_serial_out_lcd ) {
-        sprintf(buffer,"$ENV%02d%02d%02d",rtc.hour,rtc.minute.rtc.second);
+        sprintf(buffer,"$ENV%02d%02d%02d",rtc.hour,rtc.minute,rtc.second);
         uart1_puts(buffer);
+		
+		sprintf(buffer,"IT%02d",internal_temperature.temperature);
+        uart1_puts(buffer);
+		
+		sprintf(buffer,"ET%02d",external_temperature.temperature);
+        uart1_puts(buffer);
+		
+		sprintf(buffer,"BP%ldBPT%ld",pressure,temperature);
+        uart1_puts(buffer);
+			
+		/*
         if( internal_temperature.status.status == k_peripheral_status_ok ) {
             sprintf(buffer,"IT%02d",internal_temperature.temperature);
             uart1_puts(buffer);
@@ -241,12 +323,13 @@ void report_enviro {
             uart1_puts("ETNA");
         }
         if( bmp085.status.status = k_peripheral_status_ok ) {
-            sprintf(buffer,"BP%06d",bmp085.pressure);
+            sprintf(buffer,"BP%06ldBPT%06ld",bmp085.pressure,bmp085.temperature);
             uart1_puts(buffer);
         }
         else {
             uart1_puts("BPNA");
         }
+		*/
         uart1_puts("\r");
     }   //  terminal or OpenLog destination
     else {
@@ -254,8 +337,15 @@ void report_enviro {
     }
 }
 
-/*	EXTERNAL INTERRUPTS	*/
+/************************************************************************/
+/* INTERRUPTS															*/
+/************************************************************************/
 ISR(INT7_vect) {
-	//	this is our 1Hz interrupt
-	PORTD ^= (1<<PD7);
+	read_rtc();
+	rtc.new_second = TRUE;
+}
+
+ISR(RESET_vect) {
+	
+	
 }

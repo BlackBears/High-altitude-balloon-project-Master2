@@ -2,7 +2,9 @@
 
 #include "warmer.h"
 #include "../../capabilities/a2d.h"
+#include "../../common/pindefs.h"
 #include <avr/io.h>
+#include <avr/pgmspace.h>
 
 const u08 warmer_profile[8][7] PROGMEM =
 {
@@ -14,7 +16,7 @@ const u08 warmer_profile[8][7] PROGMEM =
     {1,0,1,1,1,0,1},    // 5
     {1,1,1,1,1,0,1},    // 6
     {1,1,1,1,1,1,1},    // 7
-}
+};
 
 /*  FUNCTION PROTOTYPES */
 
@@ -35,7 +37,7 @@ void warmer_controller_init(void) {
     a2dInit();
     
     //  initialize the battery warmer
-    _init_batter_warmer(warmer[k_warmer_battery]);
+    _init_battery_warmer(&warmers[k_warmer_battery]);
 }
 
 

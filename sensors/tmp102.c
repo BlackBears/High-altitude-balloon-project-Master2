@@ -7,8 +7,10 @@
 
 #include "tmp102.h"
 #include "../common/global.h"
+#include "../common/pindefs.h"
 #include "../capabilities/i2c.h"
 #include "../capabilities/vfd.h"
+#include "../capabilities/uart.h"
 #include <util/delay.h>
 
 #define TMP102_BASE_ADDRESS 0x90	//	assumes ADR0 is tied to GND
@@ -18,9 +20,10 @@
 #define TMP102_LOW_REG		0x02
 #define TMP102_HIGH_REG		0x03
 
+char buffer[60];
 
-void tmp102_set_pwr(volatile tmp102_t *device, BOOL pwr_status) {
-    if( device->location == k_tmp102_loc_internal ) {
+void tmp102_set_pwr(tmp102_t *device, BOOL pwr_status) {
+    if( device->location == TMP102_LOC_INT ) {
         DDR(INT_TEMP_PWR_PORT) |= (1<<INT_TEMP_PWR_PIN);
         if( pwr_status )
             INT_TEMP_PWR_PORT |= (1<<INT_TEMP_PWR_PIN);
@@ -37,13 +40,16 @@ void tmp102_set_pwr(volatile tmp102_t *device, BOOL pwr_status) {
     device->status.power = (pwr_status)?PWR_ON:PWR_OFF;
 }
 
-void tmp102_read_temp(volatile tmp102_t *device) {
+void tmp102_read_temp(tmp102_t *device) {
 	u08 data[2];
 	data[0] = TMP102_TEMP_REG;
+	//sprintf(buffer,"DEVICE ADDR = %02X | DEVICE LOC = %02X\r",device->address,device->location);
+	//uart1_puts(buffer);
 	u08 retval = i2cMasterSendNI(device->address,1,&data);
 	if( retval != I2C_OK ) { 
 		device->is_valid = FALSE;
 		device->temperature = TMP102_INVALID_TEMP;
+		//uart1_puts("*** ERROR INVALID TEMP ***\r");
 		return;
 	}
 	_delay_ms(5);

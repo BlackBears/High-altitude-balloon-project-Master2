@@ -29,7 +29,7 @@ void mux_select_channel(mux_channel_t chan) {
             MUX_A_HIGH;
             MUX_B_LOW;
             break;
-        case mux_terminal;
+        case mux_terminal:
             MUX_A_LOW;
             MUX_B_HIGH;
             break;

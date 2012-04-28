@@ -1,3 +1,3 @@
 
 
-#include "terminal.c"
+#include "terminal.h"

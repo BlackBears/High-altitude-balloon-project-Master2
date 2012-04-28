@@ -21,8 +21,8 @@ void control_panel_init() {
 		control_panel_status = k_control_panel_status_preflight;
 }
 
-void control_panel_indicator_set_state(control_panel_indicator_t index, dx_indicator_state state) {
-	indicator[index].state  = state;
+void control_panel_indicator_set_state(control_panel_indicator_t index, dx_indicator_state_t state) {
+	indicators[index].state  = state;
 /*
 	if( indicator == k_dx_indicator_gps1 ) {
 		if( state == TRUE )

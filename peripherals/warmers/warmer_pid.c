@@ -23,7 +23,7 @@ void warmer_pid_reset(volatile warmer_t *warmer) {
     for( u08 i = 0; i < k_delay; i++ ) {
         warmer->pid.pid_prev[i] = 250;  //  25.0 degrees C
     }
-    warmer->pid.int = 0;                //  integral is zero
+    warmer->pid.pid_int = 0;                //  integral is zero
     warmer->pid.pid_prev_index = 0;     //  ring buffer pointer is zero
 }
 
@@ -35,7 +35,7 @@ u08 warmer_pid_update(volatile warmer_t *warmer) {
     s16 target = warmer->target_temp;
     s16 temp = warmer->current_temp;
     error = target - temp;      //  this is the current delta
-    derivative = _warmer_prev_update(temp) - temp;  //  last delta
+    derivative = _warmer_prev_update(warmer,temp) - temp;  //  last delta
     
     //  sum the weighted terms
     command  = ((s32)error)                 << warmer->pid.k_p;

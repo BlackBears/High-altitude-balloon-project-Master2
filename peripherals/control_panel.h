@@ -48,5 +48,5 @@ dx_indicator_t indicators[6];
 control_panel_status_t control_panel_status;
 
 void control_panel_init();
-void control_panel_indicator_set_state(control_panel_indicator_t indicator, dx_indicator_state state);
+void control_panel_indicator_set_state(control_panel_indicator_t indicator, dx_indicator_state_t state);
 void control_panel_indicator_update(void);

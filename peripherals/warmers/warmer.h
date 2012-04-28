@@ -15,7 +15,7 @@ enum {
 };
 typedef u08 warmer_type_t;
 
-typdef struct {
+typedef struct {
     u08 idx;
     u08 power;
 } warmer_pid_output_t;
@@ -23,10 +23,10 @@ typdef struct {
 typedef struct {
     u08 k_p;
     u08 k_i;
-    uo8 k_d;
+    u08 k_d;
     u08 k_div;
-    s16 pid_prev[k_delay]   //  prev temperatures
-    s32 pid_int;            //  integral
+    s16 pid_prev[k_delay];		//  prev temperatures
+    s32 pid_int;				//  integral
     u08 pid_prev_index;         //  previous temp index
     warmer_pid_output_t output;
 } warmer_pid_t;
@@ -43,8 +43,8 @@ typedef struct {
 
 volatile warmer_t warmers[3];
 
-void warmer_controller_init(void)
+void warmer_controller_init(void);
 void warmer_read_temp( volatile warmer_t *warmer);
-uint8_t warmer_pid_update(volatile warmer_t *warmer)
+uint8_t warmer_pid_update(volatile warmer_t *warmer);
 
 #endif

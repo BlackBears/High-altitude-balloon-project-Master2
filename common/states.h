@@ -1,4 +1,6 @@
 
+#ifndef __STATES_H_
+#define __STATES_H_
 
 #include "global.h"
 
@@ -33,7 +35,7 @@ enum {
     k_serial_out_lcd,
     k_serial_out_terminal
 };
-typedef serial_out_ channel_t;
+typedef serial_out_channel_t;
 
 typedef struct {
     u08 hour;
@@ -42,7 +44,7 @@ typedef struct {
     BOOL new_second;
 } time_t;
 
-typdef struct {
+typedef struct {
     char latitude[10];      //  4807.038N
     char longitude[11];     //  01131.000E
     time_t time;
@@ -53,3 +55,5 @@ typedef struct {
 	serial_out_channel_t serial_channel;    //  current vector of serial out
 	gps_fix_t current_fix;
 } flight_status_t;
+
+#endif
