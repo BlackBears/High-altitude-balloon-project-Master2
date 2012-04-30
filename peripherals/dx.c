@@ -5,19 +5,13 @@
 #include "../common/pindefs.h"
 
 /*  FUNCTION PROTOTYPES */
-void dx_indicator_set_state(u08 index; BOOL state);
+void dx_indicator_set_state(u08 index, BOOL state);
 
 void dx_indicator_init(void) {
-
-#if (DX_1_PORT == DX_2_PORT) && (DX_2_PORT == DX_3_PORT) && \
-    (DX_3_PORT == DX_4_PORT)
-    DDR(DX_1_PORT) |= (1<<DX_1_PIN) | (1<<DX_2_PIN) | (1<<DX_3_PIN) | (1<<DX_4_PIN);
-#else
-    DDR(DX_1_PORT) |= (1<<DX_1_PIN);
+	DDR(DX_1_PORT) |= (1<<DX_1_PIN);
     DDR(DX_2_PORT) |= (1<<DX_2_PIN);
     DDR(DX_3_PORT) |= (1<<DX_3_PIN);
     DDR(DX_4_PORT) |= (1<<DX_4_PIN);
-#endif
 
     for(u08 i = 0; i < DX_INDICATOR_COUNT; i++) {
         dx_indicator_set_state(i,FALSE);
@@ -47,8 +41,8 @@ void dx_indicator_update(u32 m) {
     }   // indicators iteration
 }
 
-void dx_indicator_set_state(u08 index; BOOL state) {
-    switch( index ):
+void dx_indicator_set_state(u08 index, BOOL state) {
+    switch( index )
     {
         case 0:
             if( state )
