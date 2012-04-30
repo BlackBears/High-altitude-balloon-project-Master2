@@ -50,10 +50,23 @@ typedef struct {
     time_t time;
 } gps_fix_t;
 
+enum {
+	TERMINAL_WAITING,
+	TERMINAL_SELECTED,
+	TERMINAL_OFF
+};
+typedef u08 terminal_status_t;
+
+typedef struct {
+	terminal_status_t state;
+	uint32_t timeout;
+} terminal_input_t;
+
 typedef struct {
 	flight_mode_t flight_mode;
 	serial_out_channel_t serial_channel;    //  current vector of serial out
 	gps_fix_t current_fix;
+	terminal_input_t terminal_input;
 } flight_status_t;
 
 #endif
