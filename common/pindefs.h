@@ -22,6 +22,17 @@
 #define GPS_PWR_PORT        PWR_CTL_PORT
 #define GPS_PWR_PIN         6
 
+/*  DX INDICATORS */
+#define DX_INDICATOR_PORT   PORTB
+#define DX_1_PORT           DX_INDICATOR_PORT
+#define DX_1_PIN            4
+#define DX_2_PORT           DX_INDICATOR_PORT
+#define DX_2_PIN            5
+#define DX_3_PORT           DX_INDICATOR_PORT
+#define DX_3_PIN            6
+#define DX_4_PORT           DX_INDICATOR_PORT
+#define DX_4_PIN            7
+
 /*  SERIAL MULTIPLEXER */
 #define SERIAL_MUX_PORT     PORTD
 #define SERIAL_MUX_A_PORT   SERIAL_MUX_PORT
