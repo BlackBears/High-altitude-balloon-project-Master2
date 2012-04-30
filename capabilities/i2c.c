@@ -126,8 +126,11 @@ inline void i2cSendStop(void)
 
 inline void i2cWaitForComplete(void)
 {
+	int i = 0;		//time out variable
+	
 	// wait for i2c interface to complete operation
-	while( !(inb(TWCR) & BV(TWINT)) );
+        while ((!(TWCR & (1<<TWINT))) && (i < 180))
+			i++;
 }
 
 inline void i2cSendByte(u08 data)
@@ -239,7 +242,8 @@ u08 i2cMasterSendNI(u08 deviceAddr, u08 length, u08* data)
 	// transmit stop condition
 	// leave with TWEA on for slave receiving
 	i2cSendStop();
-	while( !(inb(TWCR) & BV(TWSTO)) );
+	int timeout = 0;
+	while( !(inb(TWCR) & BV(TWSTO)) && (timeout < 180) ) { timeout++; }
 
 	// enable TWI interrupt
 	sbi(TWCR, TWIE);

@@ -8,6 +8,7 @@
 #include "ds1307.h"
 #include "../capabilities/i2c.h"
 #include "../common/global.h"
+#include <util/delay.h>
 
 #define SQWE	(1<<4)
 #define RS0	(1<<0)
@@ -145,14 +146,17 @@ void  ds1307_write_register(u08 reg,u08 data)
 {
 	device_data[0] = reg;
 	device_data[1] = data;
-	i2cMasterSendNI(DS1307_BASE_ADDRESS,2,&device_data);
+	cli();
+	i2cMasterSendNI(DS1307_BASE_ADDRESS,2,device_data);
+	sei();
 }
 
 u08 ds1307_read_register(u08 reg)
 {
 	device_data[0] = reg;
-	i2cMasterSendNI(DS1307_BASE_ADDRESS,1,&device_data);
-	i2cMasterReceiveNI(DS1307_BASE_ADDRESS,1,&device_data);
+	i2cMasterSendNI(DS1307_BASE_ADDRESS,1,device_data);
+	_delay_ms(10);
+	i2cMasterReceiveNI(DS1307_BASE_ADDRESS,1,device_data);
 	return device_data[0];
 }
 

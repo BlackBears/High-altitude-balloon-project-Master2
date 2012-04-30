@@ -25,6 +25,7 @@
 #include "peripherals/mux.h"
 #include "sensors/bmp085.h"
 #include "sensors/tmp102.h"
+#include "sensors/hih4030.h"
 #include "common/types.h"
 #include "common/pindefs.h"
 #include "common/states.h"
@@ -36,12 +37,38 @@
 flight_status_t flight_status;
 time_t rtc;
 char buffer[60];
-u08 last_second;                        //  used to track 1Hz tasks
 warmer_t battery_warmer;
 tmp102_t internal_temperature;
 tmp102_t external_temperature;
 bmp085_t bmp085;
 long temperature, pressure;
+u08 humidity;
+u08 cdiv;
+uint32_t rtc_millis;
+u08 last_second;
+uint32_t warmer_64Hz_millis;
+uint8_t warmer_8Hz_div;
+
+#define clockCyclesPerMicrosecond() ( F_CPU / 1600000L )
+#define clockCyclesToMicroseconds(a) ( (a) / clockCyclesPerMicrosecond() )
+#define microsecondsToClockCycles(a) ( (a) * clockCyclesPerMicrosecond() )
+
+// the prescaler is set so that timer0 ticks every 64 clock cycles, and the
+// the overflow handler is called every 256 ticks.
+#define MICROSECONDS_PER_TIMER0_OVERFLOW (clockCyclesToMicroseconds(64 * 256))
+
+// the whole number of milliseconds per timer0 overflow
+#define MILLIS_INC (MICROSECONDS_PER_TIMER0_OVERFLOW / 1000)
+
+// the fractional number of milliseconds per timer0 overflow. we shift right
+// by three to fit these numbers into a byte. (for the clock speeds we care
+// about - 8 and 16 MHz - this doesn't lose precision.)
+#define FRACT_INC ((MICROSECONDS_PER_TIMER0_OVERFLOW % 1000) >> 3)
+#define FRACT_MAX (1000 >> 3)
+
+volatile unsigned long timer0_overflow_count = 0;
+volatile unsigned long timer0_millis = 0;
+static unsigned char timer0_fract = 0;
 
 
 /************************************************************************/
@@ -52,16 +79,23 @@ void init(void);
 void _init_rtc(void);
 void _init_bmp085(void);
 void _init_tmp102(void);
+void _init_timer0(void);
 
 void read_rtc(void);
 void read_sensors(void);
+void report_enviro(void);
+
+unsigned long millis();
 
 int main(void)
 {
-    last_second = 0;
-    
+    wdt_disable();
+	wdt_enable(WDTO_2S);
+	_init_timer0();
+	rtc_millis = 0;
+	warmer_64Hz_millis = 0;
+	
 	i2cInit();          //  initialize the I2C bus
-	_delay_ms(10);      //  wait until stabilizes
 	
 	mux_init();         //  setup UART1 & set terminal as output
 	flight_status.serial_channel = k_serial_out_terminal;
@@ -79,37 +113,45 @@ int main(void)
 	/	Note that for unclear reasons, the BMP085 must be initialized first
 	/	followed by the TMP102 sensors.
 	/////////////////////////////////////////////////////////////////////////*/
-	i2cInit();          //  initialize the I2C bus
-	_delay_ms(10);      //  wait until stabilizes
-	_init_bmp085();     //  init the barometric pressure sensor
-	_delay_ms(5);
-	_init_tmp102();		//	init the temperature monitors
-	_delay_ms(5);
-	_init_rtc();		//  initialize our clock
+	_delay_ms(10);				   //  wait until stabilizes
+	
+	DO_AND_WAIT(_init_bmp085(),5);	//  init the barometric pressure sensor
+	DO_AND_WAIT(_init_tmp102(),5);	//	init the temperature monitors
+	DO_AND_WAIT(_init_rtc(),5);		//	init the real-time clock
 	warmer_controller_init();      //  initialize the warmers
+	warmer_setup();				   //  setup the warmer output
+	hih4030_init();
 	
-	battery_warmer.adc_channel = 4;
-	battery_warmer.min_temp    = 10;
-	battery_warmer.max_temp    = 15;
-	battery_warmer.type = k_warmer_battery;
 	
-	_delay_ms(100);
-	
-	_delay_ms(1000);
 	
     while(1)
     {
-		if( rtc.new_second ) {
-			rtc.new_second = FALSE;
-            last_second = rtc.second;       //  reset our last_second
+		uint32_t m = millis();
+		if( m - rtc_millis > 1000 ) {
+			//  do 1 Hz processing here
+			read_rtc();
+			if( rtc.second != last_second ) {
+				read_sensors();
+				report_enviro();
+				last_second = rtc.second;
+			}				
             
-            //  do 1 Hz processing here
-            read_sensors();
-			report_enviro();
+			rtc_millis = m;
         }
+		wdt_reset();
+		//	update our warmer output at 64 Hz (~15 ms)
+		if( m - warmer_64Hz_millis > 16) {
+			warmer_update_64Hz();       //  update the controller output at 64Hz
+			//  execute control update every 8 steps (64 Hz/8 = 8 Hz)
+			if( ++warmer_8Hz_div == 8) {
+				warmer_update_8Hz();
+				warmer_8Hz_div = 0;
+			}
+			warmer_64Hz_millis = m;
+		}
 		//sprintf(buffer,"%02d:%02d:%02d\r",rtc.hour,rtc.minute,rtc.second);
 		//uart1_puts(buffer);
-		_delay_ms(200);
+		wdt_reset();
 	}			
 }
 
@@ -117,17 +159,10 @@ int main(void)
 /* INITIALIZATION                                                       */
 /************************************************************************/
 
-void _init_watchdog_timer(void) {
-	cli();
-	wdt_reset();
-	WDTCR |= (1<<WDP2) | (1<<WDP1);
-	WDTCR |= (1<<WDE) | (1<<WDCE);
-	sei();
-}
 void _init_rtc(void) {
 	ds1307_init(kDS1307Mode24HR);
 	ds1307_sqw_set_mode(k_ds1307_sqw_mode_a);
-	
+	return;
 	//ds1307_set_hours(06);
 	//ds1307_set_minutes(11);
 	//ds1307_set_seconds(40);
@@ -147,10 +182,7 @@ void _init_warmers(void) {
 }
 
 void _init_bmp085(void) {
-	uart1_puts("Will init bmp085 from main\r");
-    bmp085_pwr_set(&bmp085, TRUE);  //  power on
-    _delay_ms(20);                  //  wait to stabilize a bit
-	uart1_puts("Will call bmp085 initialization\r");
+	DO_AND_WAIT(bmp085_pwr_set(&bmp085, TRUE),20);	//	power on and stabilize
     bmp085_init(&bmp085);           //  initialize
     
     //  if unable to read calibration values, note error status for flight
@@ -172,8 +204,7 @@ void _init_tmp102(void) {
 	//uart1_puts(buffer);
 	
 	//  power them up
-    tmp102_set_pwr(&internal_temperature,TRUE);
-	_delay_ms(20);
+	DO_AND_WAIT(tmp102_set_pwr(&internal_temperature,TRUE),20);
     tmp102_set_pwr(&external_temperature,TRUE);
     
     //  set our sensor status
@@ -192,6 +223,11 @@ void read_sensors(void) {
 	tmp102_read_temp(&internal_temperature);
 	
 	bmp085Convert(&temperature, &pressure);
+	
+	//	every 15 seconds, measure and compute the temperature-compensated relative humidity 
+	if( rtc.second % 15 == 0) {
+		humidity = hih4030_compensated_rh(external_temperature.temperature);
+	}
 	
 	/*
 #if FAULT_TOLERANCE_MODE == FAULT_TOLERANT
@@ -285,6 +321,50 @@ void read_rtc(void) {
     rtc.second = ds1307_seconds();
 }
 
+void _init_timer0(void) {
+	TIMSK |= (1<<OCIE0);				//	enable TIMER0 COMP interrupt
+	sei();								//	enable global interrupts
+	TCCR0 |= (1<<CS02) | (1<<CS00);		//	prescaler @ /128
+	TCCR0 |= (1<<WGM01);				//	CTC mode
+	OCR0 = 0xA0;						//	this val is hand-tuned with 'scope
+	
+	DDR(PORTB) |= (1<<PB1);
+}
+
+ISR(TIMER0_COMP_vect)
+{
+	// copy these to local variables so they can be stored in registers
+	// (volatile variables must be read from memory on every access)
+	unsigned long m = timer0_millis;
+	unsigned char f = timer0_fract;
+	PORTB ^= (1<<PB1);
+	
+	m += MILLIS_INC;
+	f += FRACT_INC;
+	if (f >= FRACT_MAX) {
+		f -= FRACT_MAX;
+		m += 1;
+	}
+
+	timer0_fract = f;
+	timer0_millis = m;
+	timer0_overflow_count++;
+}
+
+unsigned long millis()
+{
+   unsigned long m;
+   uint8_t oldSREG = SREG;
+
+   // disable interrupts while we read timer0_millis or we might get an
+   // inconsistent value (e.g. in the middle of a write to timer0_millis)
+   cli();
+   m = timer0_millis;
+   SREG = oldSREG;
+
+   return m;
+}
+
 /************************************************************************/
 /* REPORTING                                                            */
 /************************************************************************/
@@ -306,6 +386,8 @@ void report_enviro(void) {
 		
 		sprintf(buffer,"BP%ldBPT%ld",pressure,temperature);
         uart1_puts(buffer);
+		
+		sprintf(buffer,"HUM%03d",humidity); uart1_puts(buffer);
 			
 		/*
         if( internal_temperature.status.status == k_peripheral_status_ok ) {
@@ -343,9 +425,4 @@ void report_enviro(void) {
 ISR(INT7_vect) {
 	read_rtc();
 	rtc.new_second = TRUE;
-}
-
-ISR(RESET_vect) {
-	
-	
 }

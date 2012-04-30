@@ -21,7 +21,7 @@ s16 _warmer_prev_update(volatile warmer_t *warmer, s16 prev) {
 
 void warmer_pid_reset(volatile warmer_t *warmer) {
     for( u08 i = 0; i < k_delay; i++ ) {
-        warmer->pid.pid_prev[i] = 250;  //  25.0 degrees C
+        warmer->pid.pid_prev[i] = 25;  //  25.0 degrees C
     }
     warmer->pid.pid_int = 0;                //  integral is zero
     warmer->pid.pid_prev_index = 0;     //  ring buffer pointer is zero

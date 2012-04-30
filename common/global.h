@@ -33,4 +33,9 @@
 #define UART0 0
 #define UART1 1
 
+#define DO_AND_WAIT(a,b) do { \
+	a; \
+	_delay_ms(b); \
+} while(0);
+
 #endif /* GLOBAL_H_ */

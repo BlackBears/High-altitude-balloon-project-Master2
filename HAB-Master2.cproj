@@ -305,6 +305,12 @@
     <Compile Include="sensors\bmp085.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="sensors\hih4030.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="sensors\hih4030.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="sensors\tmp102.c">
       <SubType>compile</SubType>
     </Compile>

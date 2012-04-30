@@ -40,25 +40,36 @@ void tmp102_set_pwr(tmp102_t *device, BOOL pwr_status) {
     device->status.power = (pwr_status)?PWR_ON:PWR_OFF;
 }
 
+#define TMP102_USE_I2C_INTERRUPT 0
 void tmp102_read_temp(tmp102_t *device) {
 	u08 data[2];
 	data[0] = TMP102_TEMP_REG;
 	//sprintf(buffer,"DEVICE ADDR = %02X | DEVICE LOC = %02X\r",device->address,device->location);
 	//uart1_puts(buffer);
-	u08 retval = i2cMasterSendNI(device->address,1,&data);
+#if TMP102_USE_I2C_INTERRUPT == 0
+	cli();	//	disable interrupts to prevent corruption of data
+	u08 retval = i2cMasterSendNI(device->address,1,data);
 	if( retval != I2C_OK ) { 
 		device->is_valid = FALSE;
 		device->temperature = TMP102_INVALID_TEMP;
 		//uart1_puts("*** ERROR INVALID TEMP ***\r");
+		sei();
 		return;
 	}
 	_delay_ms(5);
-	retval = i2cMasterReceiveNI(device->address,2,&data);
+	retval = i2cMasterReceiveNI(device->address,2,data);
 	if( retval != I2C_OK ) { 
 		device->is_valid = FALSE;
 		device->temperature = TMP102_INVALID_TEMP;
+		sei();
 		return;
 	}
+	sei();	//	re-enable interrupts
+#else
+	i2cMasterSend(device->address,1,data);
+	_delay_ms(5);
+	i2cMasterReceive(device->address,1,data);
+#endif
 	
 	device->is_valid = TRUE;
 	u08 msb,lsb;

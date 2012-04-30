@@ -8,11 +8,9 @@
 #define k_delay 10
 #define warmer_count 1
 
-enum {
-    k_warmer_battery,
-    k_warmer_camera,
-    k_warmer_cellular,
-};
+#define WARMER_BATTERY 0
+#define WARMER_CAMERA 1
+#define WARMER_CELL
 typedef u08 warmer_type_t;
 
 typedef struct {
@@ -44,7 +42,7 @@ typedef struct {
 volatile warmer_t warmers[3];
 
 void warmer_controller_init(void);
-void warmer_read_temp( volatile warmer_t *warmer);
+void warmer_read_temp(u08 idx);
 uint8_t warmer_pid_update(volatile warmer_t *warmer);
 
 #endif

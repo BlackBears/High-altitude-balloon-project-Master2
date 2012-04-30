@@ -41,6 +41,8 @@
 
 #define OSS 0	// Oversampling Setting (note: code is not set up to use other OSS values)
 
+#define BMP085_I2C_INTERRUPT 0
+
 BOOL device_error;
 u08 device_data[2];
 char buffer[60];
@@ -65,14 +67,18 @@ short bmp085ReadShort(unsigned char address);
 long bmp085ReadTemp(void);
 long bmp085ReadPressure(void);
 
+#define BMP085_SHOW_CALIBRATION_VALUES 0
+
 void bmp085_init(bmp085_t *device) {
 	BMP085_Calibration();
+#if BMP085_SHOW_CALIBRATION_VALUES
 	sprintf(buffer,"BMP085 calibration data: AC(1-6),%02d,%02d,%02d,%02d,%02d,%02d\r",ac1,ac2,ac3,ac4,ac5,ac6);
 	uart1_puts(buffer);
 	sprintf(buffer,"BMP085 calibration data: B(1-2), %02d,%02d\r",b1,b2);
 	uart1_puts(buffer);
 	sprintf(buffer,"BMP085 calibration data: M(b-d), %02d,%02d,%02d\r",mb,mc,md);
 	uart1_puts(buffer);
+#endif
 }
 
 void bmp085_pwr_set(bmp085_t *device, BOOL pwr_state) {
@@ -82,9 +88,6 @@ void bmp085_pwr_set(bmp085_t *device, BOOL pwr_state) {
     else
         BMP085_PWR_PORT &= ~(1<<BMP085_PWR_PIN);
 }
-
-
-
 
 void BMP085_Calibration(void)
 {
@@ -105,12 +108,22 @@ short bmp085ReadShort(unsigned char address)
 {
 	uint8_t data[2];
     data[0] = address;
-    u08 i2c_status = i2cMasterSendNI(BMP085_BASE_ADDRESS,1,&data); 
+#if BMP085_I2C_INTERRUPT == 0
+    u08 i2c_status = i2cMasterSendNI(BMP085_BASE_ADDRESS,1,data); 
+	
+	/*
 	if( i2c_status != I2C_OK) {
 		sprintf(buffer,"*** ERROR while reading short | reg = %02X | status = %02X***",address,i2c_status);
 		uart1_puts(buffer);
 	}		
-	i2cMasterReceiveNI(BMP085_BASE_ADDRESS,2,&data);
+	*/
+	_delay_ms(5);
+	i2cMasterReceiveNI(BMP085_BASE_ADDRESS,2,data);
+#else
+	i2cMasterSend(BMP085_BASE_ADDRESS,1,data);
+	_delay_ms(5);
+	i2cMasterReceive(BMP085_BASE_ADDRESS,2,data);
+#endif
     short return_data = (data[0] << 8);
     return_data |= data[1];
 	//sprintf(buffer,"msb = %02X | msb = %02X\r",data[0],data[1]);
@@ -124,9 +137,12 @@ long bmp085ReadTemp(void)
 	uint8_t data[2];
 	data[0] = BMP085_CTL;
 	data[1] = BMP085_TEMP;
-	i2cMasterSendNI(BMP085_BASE_ADDRESS,2,&data);
+#if BMP085_I2C_INTERRUPT == 0
+	i2cMasterSendNI(BMP085_BASE_ADDRESS,2,data);
+#else
+	i2cMasterSend(BMP085_BASE_ADDRESS,2,data);
+#endif
 	_delay_ms(10);
-	//uart1_puts("Read BMP085 temp\r");
 	return (long) bmp085ReadShort(BMP085_RSLT);
 }
 
@@ -136,10 +152,14 @@ long bmp085ReadPressure(void)
 	uint8_t data[2];
 	data[0] = BMP085_CTL;
 	data[1] = BMP085_P0;
-	u08 i2c_status = i2cMasterSendNI(BMP085_BASE_ADDRESS,2,&data);
+#if BMP085_I2C_INTERRUPT == 0
+	u08 i2c_status = i2cMasterSendNI(BMP085_BASE_ADDRESS,2,data);
 	if( i2c_status != I2C_OK ) {
 		uart1_puts("*** ERROR: while reading barometric pressure ***");
 	}
+#else
+	i2cMasterSend(BMP085_BASE_ADDRESS,2,data);
+#endif
 	_delay_ms(10);
 	long p = 0;
 	p = bmp085ReadShort(BMP085_RSLT);
@@ -155,8 +175,6 @@ void bmp085Convert(long* temperature, long* pressure)
 	unsigned long b4, b7;
 	
 	ut = bmp085ReadTemp();
-	ut = bmp085ReadTemp();	// some bug here, have to read twice to get good data
-	up = bmp085ReadPressure();
 	up = bmp085ReadPressure();
 	
 	//sprintf(buffer,"up = %ld ut = %ld",up,ut); uart1_puts(buffer);
