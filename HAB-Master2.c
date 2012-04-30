@@ -11,6 +11,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
+#include <avr/pgmspace.h>
 #include <util/delay.h>
 #include <util/setbaud.h>
 #include <stdio.h>
@@ -24,6 +25,7 @@
 #include "peripherals/warmers/warmer_timing.h"
 #include "peripherals/mux.h"
 #include "peripherals/dx.h"
+#include "peripherals/terminal.h"
 #include "sensors/bmp085.h"
 #include "sensors/tmp102.h"
 #include "sensors/hih4030.h"
@@ -82,10 +84,10 @@ void _init_bmp085(void);
 void _init_tmp102(void);
 void _init_timer0(void);
 
-s16 internal_temperature();
-s16 external_temperature();
+s16 get_internal_temperature();
+s16 get_external_temperature();
 long barometric_pressure();
-u08 humidity();
+u08 get_humidity();
 void read_rtc(void);
 void read_sensors(void);
 void report_enviro(void);
@@ -96,7 +98,10 @@ int main(void)
 {
     wdt_disable();
 	wdt_enable(WDTO_2S);
-	_init_timer0();
+	DO_AND_WAIT(_init_timer0(),10);
+	
+	
+	
 	rtc_millis = 0;
 	warmer_64Hz_millis = 0;
 	
@@ -109,10 +114,9 @@ int main(void)
 	uart_init(baud_rate);
 	uart1_init(baud_rate);
 	
-	//	show welcome message
-	uart1_putc(0x0C);	//	?cls
-	sprintf(buffer,"Welcome to HAB!\r");
-	uart1_puts(buffer);
+	flight_status.terminal_input.state = TERMINAL_WAITING;
+	flight_status.terminal_input.timeout = millis() + 5000;		//	five seconds to respond
+	terminal_init();
 
 	/*////////////////////////////////////////////////////////////////////////
 	/	I2C bus initialization
@@ -131,32 +135,60 @@ int main(void)
     while(1)
     {
 		uint32_t m = millis();
-		if( m - rtc_millis > 1000 ) {
-			//  do 1 Hz processing here
-			read_rtc();
-			if( rtc.second != last_second ) {
-				read_sensors();
-				report_enviro();
-				last_second = rtc.second;
-			}				
-            
-			rtc_millis = m;
-        }
-		wdt_reset();
-		//	update our warmer output at 64 Hz (~15 ms)
-		if( m - warmer_64Hz_millis > 16) {
-			warmer_update_64Hz();       //  update the controller output at 64Hz
-			//  execute control update every 8 steps (64 Hz/8 = 8 Hz)
-			if( ++warmer_8Hz_div == 8) {
-				warmer_update_8Hz();
-				warmer_8Hz_div = 0;
+		if( flight_status.terminal_input.state == TERMINAL_WAITING ) {
+			if( m >= flight_status.terminal_input.timeout ) {
+				//	terminal did not register within timeout, so we will begin regular procedures
+				flight_status.terminal_input.state = TERMINAL_OFF;
+				uart1_puts_P("terminal timed out\r");
 			}
-			warmer_64Hz_millis = m;
-		}
+			else {
+				//	we're waiting for terminal input, so let's get a character
+				u16 terminal_data = uart1_getc();
+				if( ((terminal_data>>8) != UART_NO_DATA) && ((char)terminal_data != 0x00) ) {
+					if( (char)terminal_data != 0x0D )
+						uart1_putc((char)terminal_data);
+					terminal_process_char( (char)terminal_data );
+					flight_status.terminal_input.state = TERMINAL_SELECTED;
+				}	//	valid data on terminal
+			}	//	waiting for terminal inside timeout
+		}	//	terminal waiting
+		else if( flight_status.terminal_input.state == TERMINAL_OFF ) {
+			if( m - rtc_millis > 1000 ) {
+				//  do 1 Hz processing here
+				read_rtc();
+				if( rtc.second != last_second ) {
+					read_sensors();
+					report_enviro();
+					last_second = rtc.second;
+				}	//	last second not processed			
+            
+				rtc_millis = m;
+			}	//	~ 1000 ms passed
+			wdt_reset();
+			//	update our warmer output at 64 Hz (~15 ms)
+			if( m - warmer_64Hz_millis > 16) {
+				warmer_update_64Hz();       //  update the controller output at 64Hz
+				//  execute control update every 8 steps (64 Hz/8 = 8 Hz)
+				if( ++warmer_8Hz_div == 8) {
+					warmer_update_8Hz();
+					warmer_8Hz_div = 0;
+				}	//	8 Hz update
+				warmer_64Hz_millis = m;
+			}	//	64 Hz update
+			wdt_reset();
+			dx_indicator_update(m);
+		} // terminal is not waiting
+		else {
+			u16 terminal_data = uart1_getc();
+			if( ((terminal_data>>8) != UART_NO_DATA) && ((char)terminal_data != 0x00) ) {
+				terminal_process_char( (char)terminal_data );
+				if( (char)terminal_data != 0x0D )
+					uart1_putc((char)terminal_data);
+			}	//	valid data on terminal
+		}	//	terminal mode
 		wdt_reset();
-		dx_indicator_update();
-	}			
-}
+	} //	main loop
+}	// main
 
 /************************************************************************/
 /* INITIALIZATION                                                       */
@@ -206,12 +238,14 @@ void _init_tmp102(void) {
 
 /*  READ SENSORS */
 
-s16 internal_temperature() {
+s16 get_internal_temperature() {
+	uart1_puts_P("Will read temp on demand\r");
     tmp102_read_temp(&internal_temperature);
+	uart1_puts_P("Did read temp on demand\r");
     return internal_temperature.temperature;
 }
 
-s16 external_temperature() {
+s16 get_external_temperature() {
     tmp102_read_temp(&external_temperature);
     return external_temperature.temperature;
 }
@@ -221,7 +255,7 @@ long barometric_pressure() {
     return pressure;
 }
 
-u08 humidity() {
+u08 get_humidity() {
     tmp102_read_temp(&external_temperature); 
     humidity = hih4030_compensated_rh(external_temperature.temperature);
     return humidity;
@@ -433,3 +467,4 @@ void report_enviro(void) {
     }
 }
 
+/*	USER INTERACTION */

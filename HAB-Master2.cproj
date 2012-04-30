@@ -257,6 +257,12 @@
     <Compile Include="peripherals\ds1307.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="peripherals\dx.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="peripherals\dx.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="peripherals\mux.c">
       <SubType>compile</SubType>
     </Compile>
