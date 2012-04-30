@@ -23,6 +23,7 @@
 #include "peripherals/warmers/warmer_output.h"
 #include "peripherals/warmers/warmer_timing.h"
 #include "peripherals/mux.h"
+#include "peripherals/dx.h"
 #include "sensors/bmp085.h"
 #include "sensors/tmp102.h"
 #include "sensors/hih4030.h"
@@ -81,6 +82,10 @@ void _init_bmp085(void);
 void _init_tmp102(void);
 void _init_timer0(void);
 
+s16 internal_temperature();
+s16 external_temperature();
+long barometric_pressure();
+u08 humidity();
 void read_rtc(void);
 void read_sensors(void);
 void report_enviro(void);
@@ -97,6 +102,7 @@ int main(void)
 	
 	i2cInit();          //  initialize the I2C bus
 	
+	dx_indicator_init();
 	mux_init();         //  setup UART1 & set terminal as output
 	flight_status.serial_channel = k_serial_out_terminal;
 	u16 baud_rate = (UBRRH_VALUE << 8) | UBRRL_VALUE;
@@ -121,8 +127,6 @@ int main(void)
 	warmer_controller_init();      //  initialize the warmers
 	warmer_setup();				   //  setup the warmer output
 	hih4030_init();
-	
-	
 	
     while(1)
     {
@@ -150,6 +154,7 @@ int main(void)
 			warmer_64Hz_millis = m;
 		}
 		wdt_reset();
+		dx_indicator_update();
 	}			
 }
 
@@ -200,6 +205,28 @@ void _init_tmp102(void) {
 }
 
 /*  READ SENSORS */
+
+s16 internal_temperature() {
+    tmp102_read_temp(&internal_temperature);
+    return internal_temperature.temperature;
+}
+
+s16 external_temperature() {
+    tmp102_read_temp(&external_temperature);
+    return external_temperature.temperature;
+}
+
+long barometric_pressure() {
+    bmp085Convert(&temperature, &pressure);
+    return pressure;
+}
+
+u08 humidity() {
+    tmp102_read_temp(&external_temperature); 
+    humidity = hih4030_compensated_rh(external_temperature.temperature);
+    return humidity;
+}
+
 
 #define FAULT_TOLERANT 1
 #define NOT_FAULT_TOLERANT 0
