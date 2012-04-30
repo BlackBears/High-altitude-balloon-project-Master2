@@ -149,8 +149,6 @@ int main(void)
 			}
 			warmer_64Hz_millis = m;
 		}
-		//sprintf(buffer,"%02d:%02d:%02d\r",rtc.hour,rtc.minute,rtc.second);
-		//uart1_puts(buffer);
 		wdt_reset();
 	}			
 }
@@ -162,17 +160,6 @@ int main(void)
 void _init_rtc(void) {
 	ds1307_init(kDS1307Mode24HR);
 	ds1307_sqw_set_mode(k_ds1307_sqw_mode_a);
-	return;
-	//ds1307_set_hours(06);
-	//ds1307_set_minutes(11);
-	//ds1307_set_seconds(40);
-#if RTC_1HZ_INT == 7
-	PORTE &= ~(1<<PE7);
-	EICRB &= ~(1<<ISC70);
-	EICRB &= ~(1<<ISC71);
-	EIMSK |= (1<<INT7);
-	sei();
-#endif
 }
 
 void _init_warmers(void) {
@@ -419,10 +406,3 @@ void report_enviro(void) {
     }
 }
 
-/************************************************************************/
-/* INTERRUPTS															*/
-/************************************************************************/
-ISR(INT7_vect) {
-	read_rtc();
-	rtc.new_second = TRUE;
-}
