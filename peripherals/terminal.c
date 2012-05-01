@@ -18,11 +18,16 @@ extern s16 get_internal_temperature();  //  implemented in main program file
 extern s16 get_external_temperature();  //  implemented in main program file
 extern long barometric_pressure();  //  implemented in main program file
 extern u08 get_humidity();              //  implemented in main program file
+extern BOOL internal_temperature_power();   //  implemented in main pgm file
+extern BOOL external_temperature_power();   //  implemented in main pgm file
+extern void set_internal_temperature_power(BOOL status);    //  in main pgm
+extern void set_external_temperature_power(BOOL status);    //  in main pgm
 
 /*  FUNCTION PROTOTYPES */
 
 void _terminal_print_prompt(void);
 void _terminal_print_welcome(void);
+void _terminal_print_status(BOOL status);
 
 void terminal_init(void) {
 	uart1_putc(0x0C);
@@ -88,6 +93,47 @@ void terminal_process_char(char data) {
 			_terminal_print_prompt();
 			CLEAR_RX_BUFFER;
         }
+        else if( strcmp_P(term_buffer,PSTR("AT+ITP?")) == 0 ) {
+            BOOL status = internal_temperature_power();
+            _terminal_print_status(status);
+        }
+        else if( strcmp_P(term_buffer,PSTR("AT+ITP=")) > 0) {
+            char c_state = term_buffer[7];
+            uint8_t i_status = atoi(&term_buffer[7]);
+            if( status == 0 ) {
+                set_internal_temperature_power(FALSE);
+                _terminal_print_status(FALSE);
+            }
+            else if( status == 1 ) {
+                set_internal_temperature_power(TRUE);
+                _terminal_print_status(TRUE);
+            }
+            else {
+                CLEAR_RX_BUFFER;
+			    uart1_puts_P("\rERROR 3\r");
+            }
+        }
+        else if( strcmp_P(term_buffer,PSTR("AT+ETP?")) == 0 ) {
+            BOOL status = external_temperature_power();
+            _terminal_print_status(status);
+        }
+        else if( strcmp_P(term_buffer,PSTR("AT+ETP=")) > 0) {
+            char c_state = term_buffer[7];
+            uint8_t i_status = atoi(&term_buffer[7]);
+            if( status == 0 ) {
+                set_external_temperature_power(FALSE);
+                _terminal_print_status(FALSE);
+            }
+            else if( status == 1 ) {
+                set_external_temperature_power(TRUE);
+                _terminal_print_status(TRUE);
+            }
+            else {
+                CLEAR_RX_BUFFER;
+			    uart1_puts_P("\rERROR 3\r");
+            }
+        }
+        
 		else {
 			CLEAR_RX_BUFFER;
 			uart1_puts_P("\rERROR 2\r");
@@ -105,10 +151,26 @@ void terminal_process_char(char data) {
     }
 }
 
+//
+//  prints the standard prompt to the terminal
+//
 void _terminal_print_prompt(void) {
     uart1_puts_P("HAB>");
 }
 
+//
+//  prints status of bool condition in plain english
+//
+void _terminal_print_status(BOOL status) {
+    if( status )
+        uart1_puts_P("\rON\r");
+    else
+        uart1_puts_P("\rOFF\r");
+}
+
+//  
+//  prints a standard welcome message to the terminal
+//
 void _terminal_print_welcome(void) {
     uart1_puts_P("Welcome to HAB: High-altitude balloon controller\r");
     uart1_puts_P("Copyright (c) 2012 Alan K Duncan\r");
