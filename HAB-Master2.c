@@ -92,6 +92,11 @@ void read_rtc(void);
 void read_sensors(void);
 void report_enviro(void);
 
+BOOL internal_temperature_power();
+BOOL external_temperature_power();
+void set_internal_temperature_power(BOOL status);
+void set_external_temperature_power(BOOL status);
+
 unsigned long millis();
 
 int main(void)
@@ -139,7 +144,11 @@ int main(void)
 			if( m >= flight_status.terminal_input.timeout ) {
 				//	terminal did not register within timeout, so we will begin regular procedures
 				flight_status.terminal_input.state = TERMINAL_OFF;
-				uart1_puts_P("terminal timed out\r");
+				uart1_puts_P("\rTerminal timed out\r");
+				uart1_puts_P("Bye\r");
+				//  redirect logging to the OpenLog
+				mux_select_channel(mux_open_log);
+				
 			}
 			else {
 				//	we're waiting for terminal input, so let's get a character
@@ -359,6 +368,27 @@ void read_sensors(void) {
 	}	    
 	*/
 }
+
+/************************************************************************/
+/*  SENSOR POWER                                                        *
+/************************************************************************/
+
+BOOL internal_temperature_power() {
+    return internal_temperature.status.power;
+}
+
+BOOL external_temperature_power() {
+    return external_temperature.status.power;
+}
+
+void set_internal_temperature_power(BOOL status) {
+    tmp102_set_pwr(&internal_temperature,status);
+}
+
+void set_external_temperature_power(BOOL status) {
+    tmp102_set_pwr(&external_temperature,status);
+}
+
 
 /************************************************************************/
 /* TIMEKEEPING                                                          */
