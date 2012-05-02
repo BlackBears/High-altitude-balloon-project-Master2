@@ -14,7 +14,7 @@ USAGE:
 #include <stdlib.h>
 
 #include <avr/io.h>
-#include "../capabilities/uart.h"
+#include "../capabilities/uart-644a.h"
 
 
 /*************************************************************************

@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "capabilities/i2c.h"
-#include "capabilities/uart.h"
+#include "capabilities/uart-644a.h"
 #include "peripherals/openlog.h"
 #include "peripherals/ds1307.h"
 #include "peripherals/warmers/warmer.h"
@@ -32,7 +32,7 @@
 #include "common/types.h"
 #include "common/pindefs.h"
 #include "common/states.h"
-#include "capabilities/vfd.h"
+//#include "capabilities/vfd.h"
 
 /************************************************************************/
 /* GLOBAL VARIABLES                                                     */
@@ -96,16 +96,24 @@ BOOL internal_temperature_power();
 BOOL external_temperature_power();
 void set_internal_temperature_power(BOOL status);
 void set_external_temperature_power(BOOL status);
+void rtc_read_time(time_t *time);
 
 unsigned long millis();
 
 int main(void)
 {
-    wdt_disable();
-	wdt_enable(WDTO_2S);
+	DDRA |= (1<<PA0);
+	PORTA &= ~(1<<PA0);
+	mux_init();         //  setup UART1 & set terminal as output
+	uart_init(9600);
+	uart1_init(9600);
+	sei();
+	
+	
+    //wdt_disable();
+	//wdt_enable(WDTO_4S);
+	
 	DO_AND_WAIT(_init_timer0(),10);
-	
-	
 	
 	rtc_millis = 0;
 	warmer_64Hz_millis = 0;
@@ -113,16 +121,13 @@ int main(void)
 	i2cInit();          //  initialize the I2C bus
 	
 	dx_indicator_init();
-	mux_init();         //  setup UART1 & set terminal as output
-	flight_status.serial_channel = k_serial_out_terminal;
-	u16 baud_rate = (UBRRH_VALUE << 8) | UBRRL_VALUE;
-	uart_init(baud_rate);
-	uart1_init(baud_rate);
 	
+	flight_status.serial_channel = k_serial_out_terminal;
 	flight_status.terminal_input.state = TERMINAL_WAITING;
 	flight_status.terminal_input.timeout = millis() + 5000;		//	five seconds to respond
 	terminal_init();
-
+	read_rtc();
+	sprintf(buffer,"%02d:%02d:%02d",rtc.hour,rtc.minute,rtc.second); uart1_puts(buffer);
 	/*////////////////////////////////////////////////////////////////////////
 	/	I2C bus initialization
 	/	Note that for unclear reasons, the BMP085 must be initialized first
@@ -133,10 +138,10 @@ int main(void)
 	DO_AND_WAIT(_init_bmp085(),5);	//  init the barometric pressure sensor
 	DO_AND_WAIT(_init_tmp102(),5);	//	init the temperature monitors
 	DO_AND_WAIT(_init_rtc(),5);		//	init the real-time clock
-	warmer_controller_init();      //  initialize the warmers
-	warmer_setup();				   //  setup the warmer output
-	hih4030_init();
-	
+	//warmer_controller_init();      //  initialize the warmers
+	//warmer_setup();				   //  setup the warmer output
+	//hih4030_init();
+	//PORTA &= ~(1<<PA0);
     while(1)
     {
 		uint32_t m = millis();
@@ -147,7 +152,7 @@ int main(void)
 				uart1_puts_P("\rTerminal timed out\r");
 				uart1_puts_P("Bye\r");
 				//  redirect logging to the OpenLog
-				mux_select_channel(mux_open_log);
+				mux_select_channel(MUX_OPEN_LOG);
 				
 			}
 			else {
@@ -173,7 +178,7 @@ int main(void)
             
 				rtc_millis = m;
 			}	//	~ 1000 ms passed
-			wdt_reset();
+			//wdt_reset();
 			//	update our warmer output at 64 Hz (~15 ms)
 			if( m - warmer_64Hz_millis > 16) {
 				warmer_update_64Hz();       //  update the controller output at 64Hz
@@ -195,7 +200,7 @@ int main(void)
 					uart1_putc((char)terminal_data);
 			}	//	valid data on terminal
 		}	//	terminal mode
-		wdt_reset();
+		//wdt_reset();
 	} //	main loop
 }	// main
 
@@ -248,9 +253,7 @@ void _init_tmp102(void) {
 /*  READ SENSORS */
 
 s16 get_internal_temperature() {
-	uart1_puts_P("Will read temp on demand\r");
     tmp102_read_temp(&internal_temperature);
-	uart1_puts_P("Did read temp on demand\r");
     return internal_temperature.temperature;
 }
 
@@ -399,23 +402,27 @@ void read_rtc(void) {
     rtc.second = ds1307_seconds();
 }
 
-void _init_timer0(void) {
-	TIMSK |= (1<<OCIE0);				//	enable TIMER0 COMP interrupt
-	sei();								//	enable global interrupts
-	TCCR0 |= (1<<CS02) | (1<<CS00);		//	prescaler @ /128
-	TCCR0 |= (1<<WGM01);				//	CTC mode
-	OCR0 = 0xA0;						//	this val is hand-tuned with 'scope
-	
-	DDR(PORTB) |= (1<<PB1);
+void rtc_read_time(time_t *time) {
+	read_rtc();
+	memcpy(time,&rtc,sizeof(time_t));
 }
 
-ISR(TIMER0_COMP_vect)
+void _init_timer0(void) {
+	TIMSK0 |= (1<<OCIE0A);				//	enable TIMER0 COMP interrupt
+	sei();								//	enable global interrupts
+	
+	TCCR0B |= (1<<CS01) | (1<<CS00);	//	prescaler @ /64
+	TCCR0A |= (1<<WGM01);				//	CTC mode
+	OCR0A = 0xFA;						//	this val is hand-tuned with 'scope
+}
+
+ISR(TIMER0_COMPA_vect)
 {
 	// copy these to local variables so they can be stored in registers
 	// (volatile variables must be read from memory on every access)
 	unsigned long m = timer0_millis;
 	unsigned char f = timer0_fract;
-	PORTB ^= (1<<PB1);
+	//PORTA ^= (1<<PA0);
 	
 	m += MILLIS_INC;
 	f += FRACT_INC;

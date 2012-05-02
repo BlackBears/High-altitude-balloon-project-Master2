@@ -9,8 +9,8 @@
 #include "../common/global.h"
 #include "../common/pindefs.h"
 #include "../capabilities/i2c.h"
-#include "../capabilities/vfd.h"
-#include "../capabilities/uart.h"
+//#include "../capabilities/vfd.h"
+#include "../capabilities/uart-644a.h"
 #include <util/delay.h>
 
 #define TMP102_BASE_ADDRESS 0x90	//	assumes ADR0 is tied to GND

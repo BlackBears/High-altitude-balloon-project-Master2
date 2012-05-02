@@ -147,5 +147,7 @@ unsigned short a2dConvert10bit(unsigned char ch);
 /// returns the 8-bit value of the conversion when it is finished.
 unsigned char a2dConvert8bit(unsigned char ch);
 
+unsigned short a2dConvert10bitBandgap(void);
+
 #endif
 //@}

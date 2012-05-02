@@ -11,12 +11,7 @@ u08 div;
 //
 void warmer_timing_setup(void) {
 	DDRB |= (1<<PB0);
-    div = 0;                    //  64 Hz cycles are divided into 8 equal sections
-    #warning This is just to test warmer interrupt
-	PORTE &= ~(1<<PE6);
-	EICRB &= ~(1<<ISC60);
-	EICRB &= ~(1<<ISC61);
-	EIMSK |= (1<<INT6);
+    div = 0;                    //  64 Hz cycles are divided into 8 equal sectionss
 	sei();
 }
 

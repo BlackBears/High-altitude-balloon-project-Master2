@@ -8,7 +8,7 @@
 
 #define WARMER_OUTPUT_DEBUG 1
 #if WARMER_OUTPUT_DEBUG == 1
-#include "../../capabilities/uart.h"
+#include "../../capabilities/uart-644a.h"
 char buffer[60];
 u08 debug_count;
 #endif

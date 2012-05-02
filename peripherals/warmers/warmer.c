@@ -66,7 +66,7 @@ void _init_battery_warmer(void) {
 	warmers[WARMER_BATTERY].pid.k_d = 13;
 	warmers[WARMER_BATTERY].pid.k_div = 8;
 	warmers[WARMER_BATTERY].adc_channel = 0;
-	warmers[WARMER_BATTERY].target_temp = 28;	//  28 = 28.0 C = 82.4 F 
+	warmers[WARMER_BATTERY].target_temp = 32;	//  32 = 32.0 C
     
     DDR(BAT_WARMER_PORT) |= (1<<BAT_WARMER_PIN);
     BAT_WARMER_PORT &= ~(1<<BAT_WARMER_PIN);

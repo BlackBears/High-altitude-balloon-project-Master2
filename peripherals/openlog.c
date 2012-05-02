@@ -9,8 +9,8 @@
 #include <util/setbaud.h>
 #include "openlog.h"
 #include "../common/pindefs.h"
-#include "../capabilities/uart.h"
-#include "../capabilities/vfd.h"
+#include "../capabilities/uart-644a.h"
+//#include "../capabilities/vfd.h"
 #include <avr/io.h>
 #include <util/delay.h>
 
@@ -45,21 +45,21 @@ void open_log_set_pwr(BOOL pwr_state) {
 
 void open_log_write_test(void) {
 	open_log_reset();
-	vfd_cls();	vfd_puts("Will go cmd");
+	
 	_delay_ms(1000);
 	open_log_command_mode();				//	put in command mode and wait until ack
-	vfd_cls(); vfd_puts("Finished cmd");
+	
 	_delay_ms(1000);
 	#if OPEN_LOG_UART == UART0
 		uart_puts("rm temp01.txt");
 		_delay_ms(10);
 		//_open_log_wait_cmd_ack();
-		vfd_cls();	vfd_puts("Removed old temp01");
+		
 		_delay_ms(1000);
 		uart_puts("new temps01.txt\r");		//	create new file
 		//_open_log_wait_cmd_ack();			//	for cmd (">") acknowledgement
 		_delay_ms(10);
-		vfd_cls();	vfd_puts("Created new temp01");
+		
 		_delay_ms(1000);
 		uart_puts("append temps01.txt\r");
 		//_open_log_wait_log_ack();			//	for log ("<") acknowledgement

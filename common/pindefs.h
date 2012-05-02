@@ -46,11 +46,12 @@
 #define BMP085_EOC_PIN	PC0
 
 /*	OPEN LOG	*/
+#warning OL power port and pin are no needed now
 #define OPEN_LOG_CONTROL_PORT	PORTD
 #define OPEN_LOG_PWR_PORT		OPEN_LOG_CONTROL_PORT
-#define OPEN_LOG_PWR_PIN		6
+#define OPEN_LOG_PWR_PIN		7
 #define OPEN_LOG_RESET_PORT		OPEN_LOG_CONTROL_PORT
-#define OPEN_LOG_RESET_PIN		5
+#define OPEN_LOG_RESET_PIN		6
 
 /*  CUTDOWN CONTROLLER */
 #warning These need to be confirmed

@@ -12,8 +12,8 @@
 #include "../common/global.h"
 #include "../common/pindefs.h"
 #include "bmp085.h"
-#include "../capabilities/vfd.h"
-#include "../capabilities/uart.h"
+//#include "../capabilities/vfd.h"
+#include "../capabilities/uart-644a.h"
 
 #define BMP085_BASE_ADDRESS 0xEE
 #define BMP085_R 0xEF

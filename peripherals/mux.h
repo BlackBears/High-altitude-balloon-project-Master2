@@ -5,11 +5,9 @@
 
 #include "../common/global.h"
 
-typedef enum {
-    mux_open_log,
-    mux_lcd,
-    mux_terminal
-} mux_channel_t;
+typedef uint8_t mux_channel_t;
+static const mux_channel_t MUX_OPEN_LOG = 0;
+static const mux_channel_t MUX_TERMINAL = 1;
 
 void mux_init(void);
 void mux_select_channel(mux_channel_t chan);
