@@ -97,6 +97,7 @@ BOOL external_temperature_power();
 void set_internal_temperature_power(BOOL status);
 void set_external_temperature_power(BOOL status);
 void rtc_read_time(time_t *time);
+void rtc_set_time(time_t *time);
 
 unsigned long millis();
 
@@ -405,6 +406,12 @@ void read_rtc(void) {
 void rtc_read_time(time_t *time) {
 	read_rtc();
 	memcpy(time,&rtc,sizeof(time_t));
+}
+
+void rtc_set_time(time_t *time) {
+	ds1307_set_hours(time->hour);
+	ds1307_set_minutes(time->minute);
+	ds1307_set_seconds(time->second);
 }
 
 void _init_timer0(void) {

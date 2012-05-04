@@ -5,17 +5,19 @@
 #include "../capabilities/a2d.h"
 #include "../common/states.h"
 #include "../common/types.h"
+#include "../peripherals/mux.h"
 #include <string.h>
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include <stdlib.h>
 
 
-#define MAX_TERM_BUFFER_LEN 15
+#define MAX_TERM_BUFFER_LEN 22
 #define CLEAR_RX_BUFFER term_buffer[0] = '\0'
 
 char term_buffer[MAX_TERM_BUFFER_LEN];
-char out_buffer[20];
+char out_buffer[22];
 
 extern s16 get_internal_temperature();  //  implemented in main program file
 extern s16 get_external_temperature();  //  implemented in main program file
@@ -26,6 +28,7 @@ extern BOOL external_temperature_power();   //  implemented in main pgm file
 extern void set_internal_temperature_power(BOOL status);    //  in main pgm
 extern void set_external_temperature_power(BOOL status);    //  in main pgm
 extern void rtc_read_time(time_t *time);
+extern void rtc_set_time(time_t *time);
 
 uint16_t terminal_bandgap_voltage(void);
 
@@ -43,6 +46,17 @@ static void _terminal_print_welcome(void) {
 //
 static void _terminal_print_prompt(void) {
     uart1_puts_P("HAB>");
+}
+
+//	
+//	print an error message with code
+//	
+static void _terminal_print_error(u08 error_num) {
+	CLEAR_RX_BUFFER;
+	uart1_puts_P("\rERROR ");
+	sprintf(out_buffer,"%d\r",error_num);
+	uart1_puts(out_buffer);
+	_terminal_print_prompt();
 }
 
 //	
@@ -146,27 +160,60 @@ void terminal_process_char(char data) {
 			_terminal_print_prompt();
 			CLEAR_RX_BUFFER;
         }
-		else if( strcmp_P(term_buffer,PSTR("AT+RTC?")) == 0 ) {
-			time_t current_time;
-			rtc_read_time(&current_time);
-			sprintf(out_buffer,"\r%02d:%02d:%02d\r", current_time.hour,current_time.minute,current_time.second);
-			uart1_puts(out_buffer);
-			_terminal_print_prompt();	
+		else if( strstr(term_buffer,"AT+RTC") ) {
+			//	command is something related to RTC
+			if( strstr(term_buffer,"?") ) {
+				//	user is asking for the current time
+				time_t current_time;
+				rtc_read_time(&current_time);
+				sprintf(out_buffer,"\r%02d:%02d:%02d\r", current_time.hour,current_time.minute,current_time.second);
+				uart1_puts(out_buffer);
+				_terminal_print_prompt();	
+				CLEAR_RX_BUFFER;
+			}
+			else {
+				char *eq_ptr = strstr(term_buffer,"=");
+				if( eq_ptr ) {
+					char *component_str = (char*)malloc(3);
+					strncpy(component_str,term_buffer+7,2);
+					component_str[3] = '\0';
+					u08 hour = atoi(component_str);
+					strncpy(component_str,term_buffer+10,2);
+					component_str[3] = '\0';
+					u08 minute = atoi(component_str);
+					strncpy(component_str,term_buffer+13,2);
+					component_str[3] = '\0';
+					u08 second = atoi(component_str);
+					free(component_str);
+					time_t time = {.hour = hour, .minute = minute, .second = second, .new_second = FALSE};
+					rtc_set_time(&time);
+					uart1_puts_P("\rRTC set: ");
+					sprintf(out_buffer,"%02d:%02d:%02d\r",hour,minute,second);
+					uart1_puts(out_buffer);
+					_terminal_print_prompt();
+					CLEAR_RX_BUFFER;
+				}
+				
+				else {
+					_terminal_print_error(3);	// incorrect syntax	
+				}
+			}
+		}
+		else if( strstr_P(term_buffer,PSTR("AT+LTST")) ) {
+			open_log_write_test();
+			mux_select_channel(MUX_TERMINAL);
+			_terminal_print_prompt();
 			CLEAR_RX_BUFFER;
-		}			
-		else if( strcmp_P(term_buffe,PSTR("AT+RTC=")) > 0 ) {
-			
-		}			
-        
+		}
 		else {
-			CLEAR_RX_BUFFER;
-			uart1_puts_P("\rERROR 2\r");
+			sprintf(out_buffer,"\rcmd = %s | len = %d\r",term_buffer,strlen(term_buffer));
+			uart1_puts(out_buffer);
+			_terminal_print_error(2);
 		}			
     }
     else if( strlen(term_buffer) == MAX_TERM_BUFFER_LEN -1 ) {
         //  error, impending overflow
-        CLEAR_RX_BUFFER;
-        uart1_puts_P("\rERROR 1\r");    // long text
+        _terminal_print_error(1);
     }
     else {			
         int len = strlen(term_buffer);
