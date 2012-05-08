@@ -16,8 +16,9 @@
 #include <util/setbaud.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "capabilities/i2c.h"
-#include "capabilities/uart-644a.h"
+#include "capabilities/uart2.h"
 #include "peripherals/openlog.h"
 #include "peripherals/ds1307.h"
 #include "peripherals/warmers/warmer.h"
@@ -26,6 +27,8 @@
 #include "peripherals/mux.h"
 #include "peripherals/dx.h"
 #include "peripherals/terminal.h"
+#include "gps/gps.h"
+#include "capabilities/nmea.h"
 #include "sensors/bmp085.h"
 #include "sensors/tmp102.h"
 #include "sensors/hih4030.h"
@@ -48,6 +51,7 @@ long temperature, pressure;
 u08 humidity;
 u08 cdiv;
 uint32_t rtc_millis;
+uint32_t sensor_millis;
 u08 last_second;
 uint32_t warmer_64Hz_millis;
 uint8_t warmer_8Hz_div;
@@ -98,34 +102,45 @@ void set_internal_temperature_power(BOOL status);
 void set_external_temperature_power(BOOL status);
 void rtc_read_time(time_t *time);
 void rtc_set_time(time_t *time);
+void set_serial_channel(mux_channel_t chan);
+void set_ignore_serial_data(BOOL state);
 
 unsigned long millis();
 
+#define USING_WARMERS 1
+#define FORCE_SERIAL_OUTPUT_TERMINAL 1
+
 int main(void)
 {
-	DDRA |= (1<<PA0);
-	PORTA &= ~(1<<PA0);
+	DDRA &= ~0xFF;		//	PORTA (ADC is input for all channels)
+	DDRB |= (1<<PB1); PORTB &= ~(1<<PB1);
+	open_log_init();	
+	open_log_reset_nack();
 	mux_init();         //  setup UART1 & set terminal as output
-	uart_init(9600);
-	uart1_init(9600);
+	gps_init();			//	init the UART0, gps info and NMEA processor
+	uart1Init();		//	set up our multiplexed UART1 port
+	uartSetBaudRate(1,9600);
 	sei();
 	
+    wdt_disable();			//	disable
+	wdt_enable(WDTO_4S);	//	then re-enable the watchdog timer with 4 second interrupt
 	
-    //wdt_disable();
-	//wdt_enable(WDTO_4S);
-	
+	//	initialize our TIMER0 which counts milliseconds
 	DO_AND_WAIT(_init_timer0(),10);
 	
+	//	some time stamps
 	rtc_millis = 0;
+	sensor_millis = 0;
 	warmer_64Hz_millis = 0;
 	
 	i2cInit();          //  initialize the I2C bus
 	
 	dx_indicator_init();
 	
-	flight_status.serial_channel = k_serial_out_terminal;
+	flight_status.serial_channel = MUX_TERMINAL;
 	flight_status.terminal_input.state = TERMINAL_WAITING;
 	flight_status.terminal_input.timeout = millis() + 5000;		//	five seconds to respond
+	flight_status.event.gps_altitude_timeout = millis() + 10000;
 	terminal_init();
 	read_rtc();
 	sprintf(buffer,"%02d:%02d:%02d",rtc.hour,rtc.minute,rtc.second); uart1_puts(buffer);
@@ -139,13 +154,15 @@ int main(void)
 	DO_AND_WAIT(_init_bmp085(),5);	//  init the barometric pressure sensor
 	DO_AND_WAIT(_init_tmp102(),5);	//	init the temperature monitors
 	DO_AND_WAIT(_init_rtc(),5);		//	init the real-time clock
-	//warmer_controller_init();      //  initialize the warmers
-	//warmer_setup();				   //  setup the warmer output
-	//hih4030_init();
-	//PORTA &= ~(1<<PA0);
+	DO_AND_WAIT(_init_warmers(),2);	//	init the warmers
+	hih4030_init();
     while(1)
     {
 		uint32_t m = millis();
+		
+		/*	if we are waiting for the terminal input timer to expire and we reach the timeout
+			then say goodbye to the terminal and redirect the serial output to the OpenLog module
+			*/
 		if( flight_status.terminal_input.state == TERMINAL_WAITING ) {
 			if( m >= flight_status.terminal_input.timeout ) {
 				//	terminal did not register within timeout, so we will begin regular procedures
@@ -153,33 +170,39 @@ int main(void)
 				uart1_puts_P("\rTerminal timed out\r");
 				uart1_puts_P("Bye\r");
 				//  redirect logging to the OpenLog
+				#if FORCE_SERIAL_OUTPUT_TERMINAL == 0
 				mux_select_channel(MUX_OPEN_LOG);
-				
-			}
+				#endif
+			}	//	terminal wait timed out
 			else {
-				//	we're waiting for terminal input, so let's get a character
-				u16 terminal_data = uart1_getc();
-				if( ((terminal_data>>8) != UART_NO_DATA) && ((char)terminal_data != 0x00) ) {
-					if( (char)terminal_data != 0x0D )
-						uart1_putc((char)terminal_data);
-					terminal_process_char( (char)terminal_data );
-					flight_status.terminal_input.state = TERMINAL_SELECTED;
-				}	//	valid data on terminal
-			}	//	waiting for terminal inside timeout
+				if( !flight_status.should_ignore_serial_input  ) {
+					//	we're waiting for terminal input, so let's get a character
+					u16 terminal_data = uart1_getc();
+					if( ((terminal_data>>8) != UART_NO_DATA) && ((char)terminal_data != 0x00) ) {
+						if( (char)terminal_data != 0x0D )
+							uart1_putc((char)terminal_data);
+						terminal_process_char( (char)terminal_data );
+						flight_status.terminal_input.state = TERMINAL_SELECTED;
+					}	//	valid data on terminal
+				}	// mux terminal is active channel
+			}	//	terminal wait did NOT timeout
 		}	//	terminal waiting
 		else if( flight_status.terminal_input.state == TERMINAL_OFF ) {
-			if( m - rtc_millis > 1000 ) {
-				//  do 1 Hz processing here
+			if( m - rtc_millis >= 1000) {
 				read_rtc();
-				if( rtc.second != last_second ) {
-					read_sensors();
-					report_enviro();
-					last_second = rtc.second;
-				}	//	last second not processed			
-            
-				rtc_millis = m;
-			}	//	~ 1000 ms passed
-			//wdt_reset();
+				rtc_millis = m;	
+			}	// 1000 ms passed since read RTC	
+			if( m - sensor_millis >= 5000) {
+				read_sensors();
+				report_enviro();
+				sensor_millis = m;
+			}	//	5000 ms passed since read sensors
+			if( m >= flight_status.event.gps_altitude_timeout ) {
+				//	TODO: record the GPS altitude in the 'altimeter'
+			}
+			wdt_reset();
+			
+			#if USING_WARMERS == 1
 			//	update our warmer output at 64 Hz (~15 ms)
 			if( m - warmer_64Hz_millis > 16) {
 				warmer_update_64Hz();       //  update the controller output at 64Hz
@@ -190,18 +213,32 @@ int main(void)
 				}	//	8 Hz update
 				warmer_64Hz_millis = m;
 			}	//	64 Hz update
+			#endif
 			wdt_reset();
 			dx_indicator_update(m);
 		} // terminal is not waiting
 		else {
-			u16 terminal_data = uart1_getc();
-			if( ((terminal_data>>8) != UART_NO_DATA) && ((char)terminal_data != 0x00) ) {
-				terminal_process_char( (char)terminal_data );
-				if( (char)terminal_data != 0x0D )
-					uart1_putc((char)terminal_data);
-			}	//	valid data on terminal
+			/*	NOTE: this code block is everything else that should happen in the main loop
+				but is not contingent on anything else; so, tasks that should always run
+				as frequently as possible, e.g. polling the GPS, looking for cell calls, etc.
+				*/
+			if( !flight_status.should_ignore_serial_input ) {
+				u16 terminal_data = uart1_getc();
+				if( ((terminal_data>>8) != UART_NO_DATA) && ((char)terminal_data != 0x00) ) {
+					terminal_process_char( (char)terminal_data );
+					if( (char)terminal_data != 0x0D )
+						uart1_putc((char)terminal_data);
+				}	//	valid data on terminal
+			}	//	should not ignore serial data
+			/*
+			u16 gps_data = uart_getc();
+			if( (gps_data >> 8) != UART_NO_DATA && ((char)gps_data != 0x00)) {
+				gps_add_char(gps_data);
+				
+			}	//	valid data on the gps
+			*/
 		}	//	terminal mode
-		//wdt_reset();
+		wdt_reset();
 	} //	main loop
 }	// main
 
@@ -429,7 +466,6 @@ ISR(TIMER0_COMPA_vect)
 	// (volatile variables must be read from memory on every access)
 	unsigned long m = timer0_millis;
 	unsigned char f = timer0_fract;
-	//PORTA ^= (1<<PA0);
 	
 	m += MILLIS_INC;
 	f += FRACT_INC;
@@ -465,50 +501,29 @@ unsigned long millis()
 //  send environmental data to whichever UART1 vector is active
 //  
 void report_enviro(void) {
-    //  format report differently depending on output vector
-    if( flight_status.serial_channel != k_serial_out_lcd ) {
-        sprintf(buffer,"$ENV%02d%02d%02d",rtc.hour,rtc.minute,rtc.second);
-        uart1_puts(buffer);
+	sprintf(buffer,"$ENV%02d%02d%02d",rtc.hour,rtc.minute,rtc.second);
+    uart1_puts(buffer);
 		
-		sprintf(buffer,"IT%02d",internal_temperature.temperature);
-        uart1_puts(buffer);
+	sprintf(buffer,"IT%02d",internal_temperature.temperature);
+    uart1_puts(buffer);
 		
-		sprintf(buffer,"ET%02d",external_temperature.temperature);
-        uart1_puts(buffer);
+	sprintf(buffer,"ET%02d",external_temperature.temperature);
+    uart1_puts(buffer);
 		
-		sprintf(buffer,"BP%ldBPT%ld",pressure,temperature);
-        uart1_puts(buffer);
+	sprintf(buffer,"BP%ldBPT%ld",pressure,temperature);
+    uart1_puts(buffer);
 		
-		sprintf(buffer,"HUM%03d",humidity); uart1_puts(buffer);
-			
-		/*
-        if( internal_temperature.status.status == k_peripheral_status_ok ) {
-            sprintf(buffer,"IT%02d",internal_temperature.temperature);
-            uart1_puts(buffer);
-        }
-        else {
-            uart1_puts("ITNA");
-        }
-        if( external_temperature.status.status = k_peripheral_status_ok ) {
-            sprintf(buffer,"ET%02d",external_temperature.temperature);
-            uart1_puts(buffer);
-        }
-        else {
-            uart1_puts("ETNA");
-        }
-        if( bmp085.status.status = k_peripheral_status_ok ) {
-            sprintf(buffer,"BP%06ldBPT%06ld",bmp085.pressure,bmp085.temperature);
-            uart1_puts(buffer);
-        }
-        else {
-            uart1_puts("BPNA");
-        }
-		*/
-        uart1_puts("\r");
-    }   //  terminal or OpenLog destination
-    else {
-        //
-    }
+	sprintf(buffer,"HUM%03d",humidity); uart1_puts(buffer);
+	uart1_puts("\r");
+}
+
+void set_serial_channel(mux_channel_t chan) {
+	mux_select_channel(chan);
+	flight_status.serial_channel = chan;
+}
+
+void set_ignore_serial_data(BOOL state) {
+	flight_status.should_ignore_serial_input = state;
 }
 
 /*	USER INTERACTION */

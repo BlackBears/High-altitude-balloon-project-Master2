@@ -128,24 +128,26 @@
   </avrgcc.compiler.symbols.DefSymbols>
   <avrgcc.compiler.optimization.level>Optimize for size (-Os)</avrgcc.compiler.optimization.level>
   <avrgcc.compiler.optimization.PackStructureMembers>True</avrgcc.compiler.optimization.PackStructureMembers>
-  <avrgcc.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcc.compiler.optimization.AllocateBytesNeededForEnum>
   <avrgcc.compiler.optimization.DebugLevel>Default (-g2)</avrgcc.compiler.optimization.DebugLevel>
   <avrgcc.compiler.warnings.AllWarnings>True</avrgcc.compiler.warnings.AllWarnings>
-  <avrgcc.linker.libraries.Libraries>
-    <ListValues>
-      <Value>m</Value>
-    </ListValues>
-  </avrgcc.linker.libraries.Libraries>
-  <avrgcc.linker.miscellaneous.LinkerFlags>-Wl,-u,vfprintf -lprintf_flt -lm </avrgcc.linker.miscellaneous.LinkerFlags>
+  <avrgcc.linker.miscellaneous.LinkerFlags>-Wl,-u,vfprintf -lprintf_flt  -lm</avrgcc.linker.miscellaneous.LinkerFlags>
   <avrgcc.assembler.debugging.DebugLevel>Default (-Wa,-g)</avrgcc.assembler.debugging.DebugLevel>
 </AvrGcc>
     </ToolchainSettings>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="capabilities\a2d.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="capabilities\a2d.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\altimeter.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="capabilities\altimeter.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="capabilities\buffer.c">
@@ -169,10 +171,10 @@
     <Compile Include="capabilities\i2cconf.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="capabilities\onewire.c">
+    <Compile Include="capabilities\nmea.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="capabilities\onewire.h">
+    <Compile Include="capabilities\nmea.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="capabilities\rprintf.c">
@@ -220,10 +222,10 @@
     <Compile Include="common\types.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="gps\gps2.c">
+    <Compile Include="gps\gps.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="gps\gps2.h">
+    <Compile Include="gps\gps.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="HAB-Master2.c">

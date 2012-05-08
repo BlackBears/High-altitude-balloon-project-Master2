@@ -44,12 +44,6 @@ char bcd2dec(char num)
 
 void ds1307_init(DS1307HourMode mode)
 {
-	for( u08 i = 0; i < 3; i++ ) {
-		PORTA |= (1<<PA0);
-		_delay_ms(250);
-		PORTA &= ~(1<<PA0);
-		_delay_ms(250);
-	}
 	
 	/*	To start the oscillator, we need to write CH = 0 (bit 7/reg 0) */
 	u08 seconds = ds1307_read_register(DS1307_SECONDS_ADDR);

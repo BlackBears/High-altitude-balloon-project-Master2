@@ -78,8 +78,8 @@ void warmer_update_64Hz(void) {
     u08 output_index = warmers[WARMER_BATTERY].pid.output.idx;
 #if WARMER_OUTPUT_DEBUG == 1
 	if( debug_count % 63 == 0) {
-		sprintf(buffer,"scaled_pwr = %02d | idx = %02d\r",scaled_power_level,output_index);
-		uart1_puts(buffer);	
+		//sprintf(buffer,"scaled_pwr = %02d | idx = %02d\r",scaled_power_level,output_index);
+		//uart1_puts(buffer);	
 	}		
 #endif
     

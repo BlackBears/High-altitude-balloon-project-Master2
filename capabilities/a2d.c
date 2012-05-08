@@ -88,16 +88,14 @@ unsigned short a2dConvert10bit(unsigned char ch)
 {
 	a2dCompleteFlag = FALSE;				// clear conversion complete flag
 	outb(ADMUX, (inb(ADMUX) & ~ADC_MUX_MASK) | (ch & ADC_MUX_MASK));	// set channel
-	ADCSR |= (1<<ADIF);						// clear hardware "conversion complete" flag
-	ADCSR |= (1<ADSC);						// begin conversion
-	//while(!a2dCompleteFlag);				// wait until conversion complete
+	sbi(ADCSR, ADIF);						// clear hardware "conversion complete" flag 
+	sbi(ADCSR, ADSC);						// start conversion
+	while(!a2dCompleteFlag);				// wait until conversion complete
 	//while( bit_is_clear(ADCSR, ADIF) );		// wait until conversion complete
 	//while( bit_is_set(ADCSR, ADSC) );		// wait until conversion complete
-	//Wait for conversion to complete
-	while(!(ADCSRA & (1<<ADIF)));
 
 	// CAUTION: MUST READ ADCL BEFORE ADCH!!!
-	return (ADC);	// read ADC (full 10 bits);
+	return (inb(ADCL) | (inb(ADCH)<<8));	// read ADC (full 10 bits);
 }
 
 // Perform a 8-bit conversion.

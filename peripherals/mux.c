@@ -13,6 +13,7 @@ void mux_init(void) {
     DDR(SERIAL_MUX_B_PORT) |= (1<<SERIAL_MUX_B_PIN);
     
     mux_select_channel(MUX_TERMINAL);
+	mux_current_channel = MUX_TERMINAL;
 }
 
 void mux_select_channel(mux_channel_t chan) {
@@ -24,4 +25,5 @@ void mux_select_channel(mux_channel_t chan) {
 		MUX_A_LOW;
         MUX_B_HIGH;
 	}		
+	mux_current_channel = chan;
 }

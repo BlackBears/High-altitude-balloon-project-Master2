@@ -3,6 +3,8 @@
 #define __STATES_H_
 
 #include "global.h"
+#include "types.h"
+#include "../peripherals/mux.h"
 
 enum {
 	k_flight_mode_off,	
@@ -30,25 +32,7 @@ typedef struct {
     
 } sensor_status_t;
 
-enum {
-    k_serial_out_open_log,
-    k_serial_out_lcd,
-    k_serial_out_terminal
-};
-typedef serial_out_channel_t;
 
-typedef struct {
-    u08 hour;
-    u08 minute;
-    u08 second;
-    BOOL new_second;
-} time_t;
-
-typedef struct {
-    char latitude[10];      //  4807.038N
-    char longitude[11];     //  01131.000E
-    time_t time;
-} gps_fix_t;
 
 enum {
 	TERMINAL_WAITING,
@@ -63,10 +47,16 @@ typedef struct {
 } terminal_input_t;
 
 typedef struct {
+	u32 gps_altitude_timeout;	//	when should we record the GPS-provided altitude in the altimeter
+} periodic_timing_t;
+
+typedef struct {
 	flight_mode_t flight_mode;
-	serial_out_channel_t serial_channel;    //  current vector of serial out
+	mux_channel_t serial_channel;		//  current vector of serial out
+	BOOL should_ignore_serial_input;	//	used to suppress interpretation of serial data
 	gps_fix_t current_fix;
 	terminal_input_t terminal_input;
+	periodic_timing_t event;
 } flight_status_t;
 
 #endif

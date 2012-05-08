@@ -38,7 +38,7 @@
 
 /* test if the size of the circular buffers fits into SRAM */
 #if ( (UART_RX_BUFFER_SIZE+UART_TX_BUFFER_SIZE) >= (RAMEND-0x60 ) )
-#error "size of UART_RX_BUFFER_SIZE + UART_TX_BUFFER_SIZE larger than size of SRAM"
+#warning "size of UART_RX_BUFFER_SIZE + UART_TX_BUFFER_SIZE larger than size of SRAM"
 #endif
 
 /* 
@@ -143,6 +143,9 @@ extern void uart1_puts(const char *s );
 extern void uart1_puts_p(const char *s );
 /** @brief  Macro to automatically put a string constant into program memory */
 #define uart1_puts_P(__s)       uart1_puts_p(PSTR(__s))
+
+void uart1_flush(void);
+void uart1_flush_xmit(void);
 
 /**@}*/
 

@@ -49,7 +49,7 @@ typedef struct struct_cBuffer
 // function prototypes
 
 //! initialize a buffer to start at a given address and have given size
-void			bufferInit(cBuffer* buffer, unsigned char *start, unsigned short size);
+void bufferInit(cBuffer* buffer, unsigned char *start, unsigned short size);
 
 //! get the first byte from the front of the buffer
 unsigned char	bufferGetFromFront(cBuffer* buffer);

@@ -12,7 +12,10 @@
 #include "../capabilities/uart-644a.h"
 //#include "../capabilities/vfd.h"
 #include <avr/io.h>
+#include <avr/pgmspace.h>
 #include <util/delay.h>
+#include "../capabilities/uart-644a.h"
+#include "mux.h"
 
 #define ASCII_SUB 0x1A
 
@@ -43,6 +46,28 @@ void open_log_set_pwr(BOOL pwr_state) {
 	}
 }
 
+void open_log_ls(char *buffer, size_t size) {
+	open_log_command_mode();
+	_delay_ms(10);
+	
+	uart1_puts_P("ls");  
+	uart1_putc(0x0D);
+	_delay_ms(10);
+	
+	u08 index = 0;
+	while( 1 ) {
+		u16 c = uart1_getc();
+		if( (c<<8) != UART_NO_DATA ) {
+			buffer[index++] = c;
+		}
+		if( index >= size ) {
+			buffer[index] = '\0';
+			break;
+		}
+		_delay_ms(10);
+	}
+}
+
 void open_log_write_test(void) {
 	open_log_reset();
 	
@@ -68,7 +93,7 @@ void open_log_write_test(void) {
 	#else
 		uart1_puts("new temps.txt\r");
 		while(1) {
-			ack = uart1_getc();
+			u16 ack = uart1_getc();
 			if( ack == '>' ) { break; }
 		}
 		uart1_puts("append temps.txt\r");
@@ -130,4 +155,10 @@ void open_log_reset() {
 		#endif
 		if( ack == '<' ) { break; }
 	}
+}
+
+void open_log_reset_nack() {
+	OPEN_LOG_RESET_PORT &= ~(1<<OPEN_LOG_RESET_PIN);
+	_delay_ms(200);
+	OPEN_LOG_RESET_PORT |= (1<<OPEN_LOG_RESET_PIN);
 }

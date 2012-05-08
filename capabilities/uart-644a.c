@@ -73,8 +73,7 @@ Purpose:  called when the UART has received a character
     unsigned char data;
     unsigned char usr;
     unsigned char lastRxError;
- 
- 
+	PORTB ^= (1<<PB1);
     /* read UART status register and UART data register */ 
     usr  = UART0_STATUS;
     data = UART0_DATA;
@@ -131,7 +130,6 @@ Purpose:  called when the UART1 has received a character
     /* read UART status register and UART data register */ 
     usr  = UART1_STATUS;
     data = UART1_DATA;
-    PORTA ^= (1<<PA0);
     /* */
     lastRxError = (usr & (_BV(FE1)|_BV(DOR1)) );
         
@@ -172,6 +170,7 @@ Purpose:  called when the UART1 is ready to transmit the next byte
 }
 
 void uart_init(uint16_t baud_rate) {
+	return;
 	UART_TxHead = 0;
     UART_TxTail = 0;
     UART_RxHead = 0;
@@ -182,7 +181,7 @@ void uart_init(uint16_t baud_rate) {
 	// Load lower 8- bits of the baud rate value into the low byte of the UBRR register
 	UBRR0L = BAUD_PRESCALE(baud_rate); 
 	
-	UCSR0B |= (1 << RXEN0 ) | (1 << TXEN0 ) | (1 << RXCIE0); // Turn on the transmission and reception circuitry
+	UCSR0B |= (1 << RXEN0 ) | (1 << TXEN0 ) | (1<<RXCIE0);		// Turn on the transmission and reception circuitry
 	UCSR0C |= (1 << UCSZ00 ) | (1 << UCSZ01 ); // Use 8- bit character sizes
 }
 
@@ -355,3 +354,18 @@ void uart1_puts_p(const char *progmem_s )
       uart1_putc(c);
 
 }/* uart1_puts_p */
+
+/*************************************************************************
+Function: uart1_flush()
+Purpose:  Flush bytes waiting the receive buffer.  Acutally ignores them.
+Input:    None
+Returns:  None
+**************************************************************************/
+void uart1_flush(void)
+{
+        UART1_RxHead = UART1_RxTail;
+}/* uart1_flush */
+
+void uart1_flush_xmit(void) {
+	UART1_TxHead = UART1_TxTail;
+}

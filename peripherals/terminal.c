@@ -17,7 +17,7 @@
 #define CLEAR_RX_BUFFER term_buffer[0] = '\0'
 
 char term_buffer[MAX_TERM_BUFFER_LEN];
-char out_buffer[22];
+char out_buffer[100];
 
 extern s16 get_internal_temperature();  //  implemented in main program file
 extern s16 get_external_temperature();  //  implemented in main program file
@@ -29,6 +29,11 @@ extern void set_internal_temperature_power(BOOL status);    //  in main pgm
 extern void set_external_temperature_power(BOOL status);    //  in main pgm
 extern void rtc_read_time(time_t *time);
 extern void rtc_set_time(time_t *time);
+extern void open_log_ls(char *buffer, size_t size);
+extern void set_serial_channel(mux_channel_t chan);
+extern void set_ignore_serial_data(BOOL state);
+
+
 
 uint16_t terminal_bandgap_voltage(void);
 
@@ -127,7 +132,7 @@ void terminal_process_char(char data) {
 			CLEAR_RX_BUFFER;
         }
         else if( strcmp_P(term_buffer,PSTR("AT+H?")) == 0 ) {
-            u08 rh = humidity();
+            u08 rh = get_humidity();
             sprintf(out_buffer,"\r%02d\r",rh);
             uart1_puts(out_buffer);
             _terminal_print_prompt();
@@ -160,6 +165,15 @@ void terminal_process_char(char data) {
 			_terminal_print_prompt();
 			CLEAR_RX_BUFFER;
         }
+		else if( strstr_P(term_buffer,PSTR("AT+V33?"))) {
+			a2dInit();
+			uint16_t adc_data = a2dConvert10bit(6);
+			float vcc33 = 5000.0f * (float)adc_data/1023.0f;
+			sprintf(out_buffer,"\r~ %0.2f mV\r",vcc33);
+			uart1_puts(out_buffer);
+			_terminal_print_prompt();
+			CLEAR_RX_BUFFER;
+		}
 		else if( strstr(term_buffer,"AT+RTC") ) {
 			//	command is something related to RTC
 			if( strstr(term_buffer,"?") ) {
@@ -199,18 +213,64 @@ void terminal_process_char(char data) {
 				}
 			}
 		}
-		else if( strstr_P(term_buffer,PSTR("AT+LTST")) ) {
-			open_log_write_test();
-			mux_select_channel(MUX_TERMINAL);
+		else if( strstr(term_buffer,"AT+LGCM") ) {
+			BOOL success = FALSE;
+			CLEAR_RX_BUFFER;
+			set_ignore_serial_data(TRUE);		//	don't process serial input as terminal commands
+			set_serial_channel(MUX_OPEN_LOG);	//	switch serial path to logger
+			uart1_putc(0x1A);					//	control-z x 3 puts us in command mode
+			uart1_putc(0x1A);
+			uart1_putc(0x1A);
+			for(u16 timeout = 0; timeout < 1000; timeout++) {
+				u08 c = uart1_getc();
+				if( c == '>' ) {
+					success = TRUE;
+					break;
+				}
+				_delay_ms(1);
+			}
+			uart1_flush();
+			set_serial_channel(MUX_TERMINAL);
+			if( success ) 
+				uart1_puts_P("\r+ CMD mode\r");
+			else
+				uart1_puts_P("\r- CMD mode\r");
+			set_ignore_serial_data(FALSE);
 			_terminal_print_prompt();
 			CLEAR_RX_BUFFER;
+		}	//	LOG CMD
+		else if( strstr(term_buffer,"AT+LGLS")) {
+			CLEAR_RX_BUFFER;
+			set_ignore_serial_data(TRUE);		//	don't process serial input as terminal commands
+			set_serial_channel(MUX_OPEN_LOG);	//	switch serial path to logger
+			uart1_puts("This is a test\r");
+			_delay_ms(100);
+			set_serial_channel(MUX_TERMINAL);
+			set_ignore_serial_data(FALSE);
+			_terminal_print_prompt();
+			CLEAR_RX_BUFFER;
+		}
+		else if( strstr(term_buffer,"AT?")) {
+			uart1_putc('\r');
+			uart1_puts_P("HAB TERMINAL COMMANDS\r\r");
+			uart1_puts_P("AT+V?\t\t\tReturns the estimated +5V bus voltage\r");
+			uart1_puts_P("AT+V33?\t\t\tReturns the estimated +3.3V bus voltage\r");
+			uart1_puts_P("AT+IT?\t\t\tReturns the capsule interior temperature\r");
+			uart1_puts_P("AT+ET?\t\t\tReturns the capsule exterior temperature\r");
+			uart1_puts_P("AT+BP?\t\t\tReturns the barometric pressure in Pascals (Pa)\r");
+			uart1_puts_P("AT+RTC?\t\t\tReads the real-time clock (RTC)\r");
+			uart1_puts_P("AT+RTC=HH:MM:SS\t\tSets the RTC\r");
+			uart1_puts_P("AT+LGCM\t\t\tPuts the logger into command mode\r");
+			uart1_puts_P("AT+LGLS\t\t\tWrites a test string to open log\r");
+			CLEAR_RX_BUFFER;
+			_terminal_print_prompt();
 		}
 		else {
 			sprintf(out_buffer,"\rcmd = %s | len = %d\r",term_buffer,strlen(term_buffer));
 			uart1_puts(out_buffer);
 			_terminal_print_error(2);
 		}			
-    }
+    }		
     else if( strlen(term_buffer) == MAX_TERM_BUFFER_LEN -1 ) {
         //  error, impending overflow
         _terminal_print_error(1);
