@@ -39,13 +39,13 @@ static void _warmer_output(u08 idx, u08 on_off) {
         if( on_off ) {
             BAT_WARMER_PORT |= (1<<BAT_WARMER_PIN);
 #if WARMER_OUTPUT_DEBUG_DETAIL == 1
-	uart1_puts("*");
+	uartSendByte(1,'*');
 #endif
         }
         else {
             BAT_WARMER_PORT &= ~(1<<BAT_WARMER_PIN);
 #if WARMER_OUTPUT_DEBUG_DETAIL == 1
-	uart1_puts("_");
+	uartSendByte(1,'_');
 #endif
         }
     }
@@ -105,7 +105,7 @@ void warmer_update_8Hz(void) {
 	debug_count++;
 	if( debug_count % 63 == 0 ) {
 		sprintf(buffer,"Warmer c_temp = %02d | ttemp = %02d | r_pwr = %02d s_pwr = %02d\r",warmers[WARMER_BATTERY].current_temp,warmers[WARMER_BATTERY].target_temp,raw_power,warmers[WARMER_BATTERY].pid.output.power);
-		uart1_puts(buffer);
+		uartSendString(1,buffer);
 		debug_count = 0;
 	}	
 #endif
