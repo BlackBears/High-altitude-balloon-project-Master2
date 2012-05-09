@@ -1,10 +1,16 @@
-/*
- * ds1307.c
- *
- * Created: 3/30/2012 11:07:13 AM
- *  Author: Owner
- */ 
-
+//////////////////////////////////////////////////////////////////////////////////////////
+//	
+//	File		: 'ds1307.c'
+//	Author		: Alan K. Duncan <duncan.alan@mac.com>
+//	Created		: 2012-05-01
+//	Revised		: 2012-05-09
+//	Version		: 1.0
+//	Target MCU	: ATmega644A
+//	
+//	This file provides an interface to the DS1307 real-time clock, using its I2C interface
+//
+//
+//////////////////////////////////////////////////////////////////////////////////////////
 #include "ds1307.h"
 #include "../capabilities/i2c.h"
 #include "../common/global.h"
@@ -17,8 +23,6 @@
 #define DS1307_BASE_ADDRESS 0xD0
 #define CH (1<<7)
 #define HR (1<<6)
-
-u08 device_data[2];
 
 u08 ds1307_read_register(u08 reg);
 void  ds1307_write_register(u08 reg,u08 data);
@@ -148,6 +152,7 @@ void ds1307_set_year(u08 year)
 
 void  ds1307_write_register(u08 reg,u08 data)
 {
+	u08 device_data[2];
 	device_data[0] = reg;
 	device_data[1] = data;
 	cli();
@@ -157,6 +162,7 @@ void  ds1307_write_register(u08 reg,u08 data)
 
 u08 ds1307_read_register(u08 reg)
 {
+	u08 device_data[2];
 	device_data[0] = reg;
 	i2cMasterSendNI(DS1307_BASE_ADDRESS,1,device_data);
 	_delay_ms(10);
