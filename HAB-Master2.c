@@ -40,8 +40,8 @@
 /************************************************************************/
 /* GLOBAL VARIABLES                                                     */
 /************************************************************************/
-static flight_status_t flight_status;
-static time_t rtc;
+flight_status_t flight_status;
+time_t rtc;
 warmer_t battery_warmer;
 tmp102_t internal_temperature;
 tmp102_t external_temperature;
@@ -49,11 +49,10 @@ bmp085_t bmp085;
 long temperature, pressure;
 u08 humidity;
 u08 cdiv;
-uint32_t rtc_millis;
-uint32_t sensor_millis;
-u08 last_second;
-uint32_t warmer_64Hz_millis;
-uint8_t warmer_8Hz_div;
+static uint32_t rtc_millis = 0;
+static uint32_t sensor_millis = 0;
+static uint32_t warmer_64Hz_millis = 0;
+static uint8_t warmer_8Hz_div = 0;
 
 #define clockCyclesPerMicrosecond() ( F_CPU / 1600000L )
 #define clockCyclesToMicroseconds(a) ( (a) / clockCyclesPerMicrosecond() )
@@ -125,20 +124,15 @@ int main(void) {
 	gps_init();			//	init the UART0, gps info and NMEA processor
 	
 	//	deal with UART1 initialization
- 	mux_init();			//	init the serial multiplexer on UART1
-	uart1Init();		//	set up our multiplexed UART1 port
+ 	mux_init();				//	init the serial multiplexer on UART1
+	uart1Init();			//	set up our multiplexed UART1 port
 	uartSetBaudRate(1,9600);
 	sei();
+	uartSendByte(1,0x0C);	//	clear the terminal
 	
 	//	initialize our TIMER0 which counts milliseconds
 	DO_AND_WAIT(_init_timer0(),10);
 	
-	uartSendByte(1,0x0C);	//	clear the terminal
-	
-	//	some time stamps
-	rtc_millis = 0;
-	sensor_millis = 0;
-	warmer_64Hz_millis = 0;
 	
 	i2cInit();          //  initialize the I2C bus
 	
