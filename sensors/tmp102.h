@@ -1,10 +1,17 @@
-/*
- * tmp102.h
- *
- * Created: 4/13/2012 11:14:38 PM
- *  Author: Administrator
- */ 
-
+//////////////////////////////////////////////////////////////////////////////////////////
+//	
+//	File		: 'tmp102.h'
+//	Author		: Alan K. Duncan <duncan.alan@mac.com>
+//	Created		: 2012-05-01
+//	Revised		: 2012-05-09
+//	Version		: 1.0
+//	Target MCU	: ATmega644A
+//	
+//	This file provides an interface to the TMP102 temperature sensor via I2C 
+//	interface.
+//
+//
+//////////////////////////////////////////////////////////////////////////////////////////
 
 #ifndef TMP102_H_
 #define TMP102_H_

@@ -1,19 +1,32 @@
-/*
- * temp102.c
- *
- * Created: 4/13/2012 11:14:59 PM
- *  Author: Administrator
- */ 
+//////////////////////////////////////////////////////////////////////////////////////////
+//	
+//	File		: 'tmp102.c'
+//	Author		: Alan K. Duncan <duncan.alan@mac.com>
+//	Created		: 2012-05-01
+//	Revised		: 2012-05-09
+//	Version		: 1.0
+//	Target MCU	: ATmega644A
+//	
+//	This file provides an interface to the TMP102 temperature sensor via I2C 
+//	interface.
+//	
+//	Some of the implementation of the temperature conversion code is from Sparkfun's
+//	C example on their website.
+//
+//
+//////////////////////////////////////////////////////////////////////////////////////////
 
 #include "tmp102.h"
 #include "../common/global.h"
 #include "../common/pindefs.h"
 #include "../capabilities/i2c.h"
-//#include "../capabilities/vfd.h"
-#include "../capabilities/uart-644a.h"
+#include "../capabilities/uart2.h"
 #include <util/delay.h>
 
+/*	DEVICE BASE ADDRESS */
 #define TMP102_BASE_ADDRESS 0x90	//	assumes ADR0 is tied to GND
+
+/*	REGISTER ADDRESSES */
 
 #define TMP102_TEMP_REG		0x00
 #define TMP102_CONFIG_REG	0x01

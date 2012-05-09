@@ -1,10 +1,16 @@
-/*
- * hih4030.h
- *
- * Created: 4/28/2012 11:17:48 PM
- *  Author: Administrator
- */ 
-
+//////////////////////////////////////////////////////////////////////////////////////////
+//	
+//	File		: 'hih4030.h'
+//	Author		: Alan K. Duncan <duncan.alan@mac.com>
+//	Created		: 2012-05-01
+//	Revised		: 2012-05-09
+//	Version		: 1.0
+//	Target MCU	: ATmega644A
+//	
+//	This file provides an interface to the HIH4030 analog humidity sensor
+//
+//
+//////////////////////////////////////////////////////////////////////////////////////////
 
 #ifndef HIH4030_H_
 #define HIH4030_H_

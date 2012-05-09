@@ -1,9 +1,17 @@
-/*
- * bmp085.c
- *
- * Created: 4/13/2012 11:14:22 PM
- *  Author: Administrator
- */ 
+//////////////////////////////////////////////////////////////////////////////////////////
+//	
+//	File		: 'bmp085.h'
+//	Author		: Alan K. Duncan <duncan.alan@mac.com>
+//	Created		: 2012-05-01
+//	Revised		: 2012-05-09
+//	Version		: 1.0
+//	Target MCU	: ATmega644A
+//	
+//	This file provides an interface to the BMP085 barometric pressure sensor via I2C 
+//	interface.
+//
+//
+//////////////////////////////////////////////////////////////////////////////////////////
 
 #include <util/delay.h>
 #include <stdio.h>
@@ -12,13 +20,13 @@
 #include "../common/global.h"
 #include "../common/pindefs.h"
 #include "bmp085.h"
-//#include "../capabilities/vfd.h"
 #include "../capabilities/uart2.h"
 
 #define BMP085_BASE_ADDRESS 0xEE
 #define BMP085_R 0xEF
 #define BMP085_W 0xEE
 
+/*	REGISTER ADDRESSES	*/
 #define BMP085_AC1	0xAA
 #define BMP085_AC2	0xAC
 #define BMP085_AC3	0xAE
@@ -45,20 +53,19 @@
 
 BOOL device_error;
 u08 device_data[2];
-char buffer[60];
 
 /*	CALIBRATION VARIABLES */
-short ac1;
-short ac2; 
-short ac3; 
-unsigned short ac4;
-unsigned short ac5;
-unsigned short ac6;
-short b1; 
-short b2;
-short mb;
-short mc;
-short md;
+static short ac1 = 0;
+static short ac2 = 0; 
+static short ac3 - 0; 
+static unsigned short ac4 = 0;
+static unsigned short ac5 = 0;
+static unsigned short ac6 = 0;
+static short b1 = 0; 
+static short b2 = 0;
+static short mb = 0;
+static short mc = 0;
+static short md = 0;
 
 /*	FUNCTION PROTOTYPES */
 void BMP085_Calibration(void);
@@ -72,6 +79,7 @@ long bmp085ReadPressure(void);
 void bmp085_init(bmp085_t *device) {
 	BMP085_Calibration();
 #if BMP085_SHOW_CALIBRATION_VALUES
+	char buffer[60];
 	sprintf(buffer,"BMP085 calibration data: AC(1-6),%02d,%02d,%02d,%02d,%02d,%02d\r",ac1,ac2,ac3,ac4,ac5,ac6);
 	uart1_puts(buffer);
 	sprintf(buffer,"BMP085 calibration data: B(1-2), %02d,%02d\r",b1,b2);
