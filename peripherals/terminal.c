@@ -1,4 +1,13 @@
-
+//////////////////////////////////////////////////////////////////////////////////////////
+//	
+//	File		: 'terminal.h'
+//	Author		: Alan K. Duncan <duncan.alan@mac.com>
+//	Created		: 2012-05-01
+//	Revised		: 2012-05-09
+//	Version		: 1.0
+//	Target MCU	: ATmega644A
+//
+//////////////////////////////////////////////////////////////////////////////////////////
 
 #include "terminal.h"
 #include "../capabilities/uart2.h"
@@ -93,20 +102,22 @@ static uint16_t terminal_avg_bandgap_voltage(void) {
 	return (accumulator>>6);
 }
 
+//	
+//	process a character returned from the terminal input
+//
 void terminal_process_char(char data) {
-	char out_buffer[20];
-	//sprintf(out_buffer,"%s\r",term_buffer); uartSendString(1,out_buffer);
+	char out_buffer[20];	//	char buffer used to print terminal messages
     if( data == 0x0D ) {
         if( strcmp_P(term_buffer,PSTR("AT")) == 0 ) {
             uartSendString_P(1,"\rOK\r");
             _terminal_print_prompt();
 			CLEAR_RX_BUFFER;
-        }
+        }	//	AT just prints "OK"
         else if( strcmp_P(term_buffer,PSTR("AT+V?")) == 0 ) {
-            uartSendString_P(1,"\r0.9.0\r");
+            uartSendString_P(1,"\r0.9.1\r");
             _terminal_print_prompt();
 			CLEAR_RX_BUFFER;
-        }
+        }	// AT+V? prints the version of the software
         else if( strcmp_P(term_buffer,PSTR("AT+IT?")) == 0 ) {
             //  read internal temperature
             s16 t = get_internal_temperature();
@@ -114,7 +125,7 @@ void terminal_process_char(char data) {
             uartSendString(1,out_buffer);
             _terminal_print_prompt();
 			CLEAR_RX_BUFFER;
-        }
+        }	//	print internal capsule temperature
         else if( strcmp_P(term_buffer,PSTR("AT+ET?")) == 0 ) {
             //  read external temperature
             s16 t = get_external_temperature();
@@ -122,33 +133,26 @@ void terminal_process_char(char data) {
             uartSendString(1,out_buffer);
             _terminal_print_prompt();
 			CLEAR_RX_BUFFER;
-        }
+        } //	print external temperature
         else if( strcmp_P(term_buffer,PSTR("AT+BP?")) == 0 ) {
             long p = barometric_pressure();
             sprintf(out_buffer,"\r%06ld Pa\r",p);
             uartSendString(1,out_buffer);
             _terminal_print_prompt();
 			CLEAR_RX_BUFFER;
-        }
+        } //	print barometric pressure
         else if( strcmp_P(term_buffer,PSTR("AT+H?")) == 0 ) {
             u08 rh = get_humidity();
             sprintf(out_buffer,"\r%02d\r",rh);
             uartSendString(1,out_buffer);
             _terminal_print_prompt();
 			CLEAR_RX_BUFFER;
-        }
+        }	//	print humidity
         else if( strcmp_P(term_buffer,PSTR("AT+VOLT?")) == 0 ) {
 			//
 			// see: http://www.ikalogic.com/avr-monitor-power-supply-voltage-for-free/
 			//
-			/*
-			a2dInit();
-			uint16_t adc_data = a2dConvert10bit(1);
-			uartSendString(1,"Did a conversion");
-			_delay_ms(2000);
-			adc_data = a2dConvert10bit(1);
-			*/
-			a2dOff();
+			a2dOff();				// we'll use our own code for the bandgap voltage
 			ADMUX = (1<<REFS0);		// Use Vcc as the analog reference;
 			ADCSRA |= (1<<ADEN);	// turn on the ADC circuitry
 			ADCSRA |= (1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0); // prescaler /128
@@ -163,7 +167,7 @@ void terminal_process_char(char data) {
 			uartSendString(1,out_buffer);
 			_terminal_print_prompt();
 			CLEAR_RX_BUFFER;
-        }
+        }	// print estimated VCC
 		else if( strstr_P(term_buffer,PSTR("AT+V33?"))) {
 			a2dInit();
 			uint16_t adc_data = a2dConvert10bit(6);
@@ -172,7 +176,7 @@ void terminal_process_char(char data) {
 			uartSendString(1,out_buffer);
 			_terminal_print_prompt();
 			CLEAR_RX_BUFFER;
-		}
+		}	//	print the voltage on the 3.3V bus
 		else if( strstr(term_buffer,"AT+RTC") ) {
 			//	command is something related to RTC
 			if( strstr(term_buffer,"?") ) {
@@ -183,7 +187,7 @@ void terminal_process_char(char data) {
 				uartSendString(1,out_buffer);
 				_terminal_print_prompt();	
 				CLEAR_RX_BUFFER;
-			}
+			}	//	read the current time
 			else {
 				char *eq_ptr = strstr(term_buffer,"=");
 				if( eq_ptr ) {
@@ -205,11 +209,11 @@ void terminal_process_char(char data) {
 					uartSendString(1,out_buffer);
 					_terminal_print_prompt();
 					CLEAR_RX_BUFFER;
-				}
+				}	// set the RTC
 				
 				else {
 					_terminal_print_error(3);	// incorrect syntax	
-				}
+				}	// error in RTC command
 			}
 		}
 		else if( strstr(term_buffer,"AT+LGCM") ) {
