@@ -40,19 +40,19 @@
 /************************************************************************/
 /* GLOBAL VARIABLES                                                     */
 /************************************************************************/
-flight_status_t flight_status;
-time_t rtc;
-warmer_t battery_warmer;
-tmp102_t internal_temperature;
-tmp102_t external_temperature;
-bmp085_t bmp085;
-long temperature, pressure;
-u08 humidity;
-u08 cdiv;
-static uint32_t rtc_millis = 0;
-static uint32_t sensor_millis = 0;
-static uint32_t warmer_64Hz_millis = 0;
-static uint8_t warmer_8Hz_div = 0;
+flight_status_t flight_status;		//	our main flight status structure
+time_t rtc;							// 	real-time clock
+warmer_t battery_warmer;			//	battery warmer structure
+tmp102_t internal_temperature;		//	internal temperature sensor
+tmp102_t external_temperature;		// 	external temperature sensor
+bmp085_t bmp085;					//	barometric pressure sensor
+static long temperature = 0;		//	temperature from BP sensor
+static long pressure = 0;			//	barometric pressure in Pascals (Pa)
+static u08 humidity = 0;			//	external humidity reading
+static uint32_t rtc_millis = 0;		//	ms to rtc read timeout
+static uint32_t sensor_millis = 0;	//	ms to sensor read timeout
+static uint32_t warmer_64Hz_millis = 0;	//	ms until next 64 Hz timeout for warmer pulse
+static uint8_t warmer_8Hz_div = 0;	//	8 Hz counter for warmer power update
 
 #define clockCyclesPerMicrosecond() ( F_CPU / 1600000L )
 #define clockCyclesToMicroseconds(a) ( (a) / clockCyclesPerMicrosecond() )
@@ -80,11 +80,11 @@ static unsigned char timer0_fract = 0;
 /* FUNCTION PROTOTYPES                                                  */
 /************************************************************************/
 
-void init(void);
-void _init_rtc(void);
-void _init_bmp085(void);
-void _init_tmp102(void);
-void _init_timer0(void);
+static void init(void);
+static void _init_rtc(void);
+static void _init_bmp085(void);
+static void _init_tmp102(void);
+static void _init_timer0(void);
 
 s16 get_internal_temperature();
 s16 get_external_temperature();
