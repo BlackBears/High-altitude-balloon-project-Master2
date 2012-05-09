@@ -6,7 +6,7 @@
  */ 
 
 
-#include "../capabilities/uart-644a.h"
+#include "../capabilities/uart2.h"
 #include "gps.h"
 #include "../capabilities/nmea.h"
 #include <stdlib.h>
@@ -22,7 +22,8 @@ void gps_init() {
 	c_gpsData = malloc(100 * sizeof(unsigned char));
 	bufferInit(gpsBuffer,c_gpsData,BUFFER_SIZE);	//	initialize the cBuffer that holds our GPS data incoming
 	nmea_init();								//	initialize our NMEA processor
-	uart_init(4800);							//	initialize the UART0 with 4800 baud
+	uart0Init();                                //	initialize the UART0 with 4800 baud
+	uartSetBaudRate(0,  4800);  					
 }
 
 //
@@ -30,6 +31,6 @@ void gps_init() {
 //	the buffer as candidate packet
 //
 void gps_add_char(u08 data) {
-	//bufferAddToEnd(gpsBuffer,(unsigned char)data);
-	//nmea_process(gpsBuffer);
+	bufferAddToEnd(gpsBuffer,(unsigned char)data);
+	nmea_process(gpsBuffer);
 }

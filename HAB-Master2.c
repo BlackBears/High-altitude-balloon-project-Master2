@@ -143,7 +143,6 @@ int main(void)
 	flight_status.event.gps_altitude_timeout = millis() + 10000;
 	terminal_init();
 	read_rtc();
-	sprintf(buffer,"%02d:%02d:%02d",rtc.hour,rtc.minute,rtc.second); uart1_puts(buffer);
 	/*////////////////////////////////////////////////////////////////////////
 	/	I2C bus initialization
 	/	Note that for unclear reasons, the BMP085 must be initialized first
@@ -167,8 +166,8 @@ int main(void)
 			if( m >= flight_status.terminal_input.timeout ) {
 				//	terminal did not register within timeout, so we will begin regular procedures
 				flight_status.terminal_input.state = TERMINAL_OFF;
-				uart1_puts_P("\rTerminal timed out\r");
-				uart1_puts_P("Bye\r");
+				uartSendString_P(1,"\rTerminal timed out\r");
+				uartSendString_P(1,"Bye\r");
 				//  redirect logging to the OpenLog
 				#if FORCE_SERIAL_OUTPUT_TERMINAL == 0
 				mux_select_channel(MUX_OPEN_LOG);
@@ -177,10 +176,10 @@ int main(void)
 			else {
 				if( !flight_status.should_ignore_serial_input  ) {
 					//	we're waiting for terminal input, so let's get a character
-					u16 terminal_data = uart1_getc();
-					if( ((terminal_data>>8) != UART_NO_DATA) && ((char)terminal_data != 0x00) ) {
+					u08 terminal_data = uart1GetByte();
+					if( ((char)terminal_data != 0x00) ) {
 						if( (char)terminal_data != 0x0D )
-							uart1_putc((char)terminal_data);
+							uartSendByte(1,(char)terminal_data);
 						terminal_process_char( (char)terminal_data );
 						flight_status.terminal_input.state = TERMINAL_SELECTED;
 					}	//	valid data on terminal
@@ -223,11 +222,11 @@ int main(void)
 				as frequently as possible, e.g. polling the GPS, looking for cell calls, etc.
 				*/
 			if( !flight_status.should_ignore_serial_input ) {
-				u16 terminal_data = uart1_getc();
-				if( ((terminal_data>>8) != UART_NO_DATA) && ((char)terminal_data != 0x00) ) {
+				u08 terminal_data = uart1GetByte();
+				if( ((char)terminal_data != 0x00) ) {
 					terminal_process_char( (char)terminal_data );
 					if( (char)terminal_data != 0x0D )
-						uart1_putc((char)terminal_data);
+						uartSendByte(1,(char)terminal_data);
 				}	//	valid data on terminal
 			}	//	should not ignore serial data
 			/*
@@ -277,7 +276,7 @@ void _init_tmp102(void) {
 	external_temperature.address = TMP102_ADDR_VCC;
 	external_temperature.location = TMP102_LOC_EXT;
 	//sprintf(buffer,"main: ET ADDR = %02X\r",external_temperature.address);
-	//uart1_puts(buffer);
+	//uartSendString(1,buffer);
 	
 	//  power them up
 	DO_AND_WAIT(tmp102_set_pwr(&internal_temperature,TRUE),20);
@@ -327,87 +326,7 @@ void read_sensors(void) {
 		humidity = hih4030_compensated_rh(external_temperature.temperature);
 	}
 	
-	/*
-#if FAULT_TOLERANCE_MODE == FAULT_TOLERANT
-    //  read internal temperature, if invalid, keep trying for 30s
-    //  after 30s power it down to conserve power
-    if( internal_temperature.status.power ) {
-        tmp102_read_temp(&internal_temperature);    // read int temperature
-		//sprintf(buffer,"IT = %02dC\r",internal_temperature.temperature);
-		//uart1_puts(buffer);
-        if( !internal_temperature.is_valid ) {
-            u08 attempts = internal_temperature.status.connect_attempts;
-            attempts++;
-            internal_temperature.status.connect_attempts = attempts;
-            if( attempts >= 30 ) {
-                tmp102_set_pwr(&internal_temperature,FALSE);    // power down
-                internal_temperature.status.status = k_peripheral_status_error;
-            }
-            uart1_puts("INT TEMP NA");
-        }
-        else {
-            internal_temperature.status.status = k_peripheral_status_ok;
-            internal_temperature.status.connect_attempts = 0;
-        }
-    }
-	else {
-		uart1_puts("IT is not powered\r");	
-	}		
-#else
-	tmp102_read_temp(&internal_temperature);
-#endif
-    _delay_ms(20);
 	
-#if FAULT_TOLERANCE_MODE == FAULT_TOLERANT
-    //  read external temperature.  if invalid, keep trying for 30s
-    //  after 30s, power it down to converse power
-    if( external_temperature.status.power ) {
-        tmp102_read_temp(&external_temperature);    // read ext temperature
-		//sprintf(buffer,"ET = %02dC\r",external_temperature.temperature);
-		//uart1_puts(buffer);
-        if( !external_temperature.is_valid ) {
-            u08 attempts = external_temperature.status.connect_attempts;
-            attempts++;
-            if( attempts >= 30 ) {
-                tmp102_set_pwr(&external_temperature,FALSE);    // power down
-                external_temperature.status.status = k_peripheral_status_error;
-            }
-            uart1_puts("EXT TEMP NA");
-        }
-        else {
-            external_temperature.status.status = k_peripheral_status_ok;
-            external_temperature.status.connect_attempts = 0;
-        }
-    }
-	else {
-		uart1_puts("ET is not powered\r");	
-	}		
-#else
-	tmp102_read_temp(&external_temperature);
-#endif
-    _delay_ms(20);
-    //  read barometric pressure if the sensor is powered
-    if( bmp085.status.power ) {
-        bmp085_convert(&bmp085);                    // read pressure
-        if( !bmp085.is_valid ) {
-            u08 attempts = bmp085.status.connect_attempts;
-            attempts++;
-            if( attempts >= 30 ) {
-                //  power down the barometric pressure sensor
-                //  if connect attempts exceed threshold
-                bmp085_pwr_set(&bmp085,FALSE);
-                bmp085.status.status = k_peripheral_status_error;
-            }
-        }
-         else {
-            bmp085.status.status = k_peripheral_status_ok;
-            bmp085.status.connect_attempts = 0;
-        }
-    }	
-	else {
-		uart1_puts("BMP085 is not powered\r");
-	}	    
-	*/
 }
 
 /************************************************************************/
@@ -502,19 +421,19 @@ unsigned long millis()
 //  
 void report_enviro(void) {
 	sprintf(buffer,"$ENV%02d%02d%02d",rtc.hour,rtc.minute,rtc.second);
-    uart1_puts(buffer);
+    uartSendString(1,buffer);
 		
 	sprintf(buffer,"IT%02d",internal_temperature.temperature);
-    uart1_puts(buffer);
+    uartSendString(1,buffer);
 		
 	sprintf(buffer,"ET%02d",external_temperature.temperature);
-    uart1_puts(buffer);
+    uartSendString(1,buffer);
 		
 	sprintf(buffer,"BP%ldBPT%ld",pressure,temperature);
-    uart1_puts(buffer);
+    uartSendString(1,buffer);
 		
-	sprintf(buffer,"HUM%03d",humidity); uart1_puts(buffer);
-	uart1_puts("\r");
+	sprintf(buffer,"HUM%03d",humidity); uartSendString(1,buffer);
+	uartSendByte(1,"\r");
 }
 
 void set_serial_channel(mux_channel_t chan) {
