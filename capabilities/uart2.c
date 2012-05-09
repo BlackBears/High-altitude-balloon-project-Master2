@@ -20,6 +20,7 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/pgmspace.h>
 
 #include "buffer.h"
 #include "uart2.h"
@@ -58,7 +59,7 @@ void uart0Init(void)
 	// initialize user receive handlers
 	UartRxFunc[0] = 0;
 	// enable RxD/TxD and interrupts
-	outb(UCSR0B, BV(RXCIE)|BV(TXCIE)|BV(RXEN)|BV(TXEN));
+	outb(UCSR0B, BV(RXCIE0)|BV(TXCIE0)|BV(RXEN0)|BV(TXEN0));
 	// set default baud rate
 	uartSetBaudRate(0, UART0_DEFAULT_BAUD_RATE); 
 	// initialize states
@@ -77,7 +78,7 @@ void uart1Init(void)
 	// initialize user receive handlers
 	UartRxFunc[1] = 0;
 	// enable RxD/TxD and interrupts
-	outb(UCSR1B, BV(RXCIE)|BV(TXCIE)|BV(RXEN)|BV(TXEN));
+	outb(UCSR1B, BV(RXCIE1)|BV(TXCIE1)|BV(RXEN1)|BV(TXEN1));
 	// set default baud rate
 	uartSetBaudRate(1, UART1_DEFAULT_BAUD_RATE);
 	// initialize states
@@ -164,12 +165,12 @@ void uartSendByte(u08 nUart, u08 txData)
 	// send byte
 	if(nUart)
 	{
-		while(!(UCSR1A & (1<<UDRE)));
+		while(!(UCSR1A & (1<<UDRE1)));
 		outb(UDR1, txData);
 	}
 	else
 	{
-		while(!(UCSR0A & (1<<UDRE)));
+		while(!(UCSR0A & (1<<UDRE0)));
 		outb(UDR0, txData);
 	}
 	// set ready state to FALSE
@@ -372,7 +373,7 @@ UART_INTERRUPT_HANDLER(USART0_RX_vect)
 	uartReceiveService(0);
 }
 
-UART_INTERRUPT_HANDLER(USART0_RX_vect)      
+UART_INTERRUPT_HANDLER(USART1_RX_vect)      
 {
 	// service UART1 receive interrupt
 	uartReceiveService(1);

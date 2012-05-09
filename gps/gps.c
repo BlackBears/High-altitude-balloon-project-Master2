@@ -11,19 +11,19 @@
 #include "../capabilities/nmea.h"
 #include <stdlib.h>
 
-#define BUFFER_SIZE 100
+#define BUFFER_SIZE 80
 
-unsigned char *c_gpsData;
+static char c_gpsData[BUFFER_SIZE];
 //
 //	Initializes our cBuffer, the NMEA processor, and the UART0 
 //	peripheral to which the GPS is attached.
 //
 void gps_init() {
-	c_gpsData = malloc(100 * sizeof(unsigned char));
-	bufferInit(gpsBuffer,c_gpsData,BUFFER_SIZE);	//	initialize the cBuffer that holds our GPS data incoming
-	nmea_init();								//	initialize our NMEA processor
-	uart0Init();                                //	initialize the UART0 with 4800 baud
-	uartSetBaudRate(0,  4800);  					
+	//c_gpsData = malloc(80 * sizeof(unsigned char));
+	bufferInit(&gpsBuffer,c_gpsData,BUFFER_SIZE);	//	initialize the cBuffer that holds our GPS data incoming
+	nmea_init();									//	initialize our NMEA processor
+	uart0Init();									//	initialize the UART0 with 4800 baud
+	uartSetBaudRate(0, 4800);  					
 }
 
 //

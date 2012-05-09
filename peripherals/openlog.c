@@ -72,13 +72,14 @@ void open_log_write_test(void) {
 	open_log_command_mode();				//	put in command mode and wait until ack
 	
 	_delay_ms(1000);
-    uart1_puts("new temps.txt\r");
+	uartSendString_P(1,"new temps.txt\r");
+
     while(1) {
         u16 ack = uart1GetByte();
         if( ack == '>' ) { break; }
     }
-    uart1_puts("append temps.txt\r");
-    uart1_puts("Hello World!\r");
+    uartSendString_P(1,"append temps.txt\r");
+    uartSendString_P(1,"Hello World!\r");
 	
 }
 

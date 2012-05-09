@@ -40,9 +40,8 @@
 /************************************************************************/
 /* GLOBAL VARIABLES                                                     */
 /************************************************************************/
-flight_status_t flight_status;
-time_t rtc;
-char buffer[60];
+static flight_status_t flight_status;
+static time_t rtc;
 warmer_t battery_warmer;
 tmp102_t internal_temperature;
 tmp102_t external_temperature;
@@ -110,14 +109,79 @@ unsigned long millis();
 #define USING_WARMERS 1
 #define FORCE_SERIAL_OUTPUT_TERMINAL 1
 
+int main(void) {
+	wdt_disable();			//	disable
+	wdt_enable(WDTO_4S);	//	then re-enable the watchdog timer with 4 second interrupt
+	
+	DDRB |= (1<<PB1); PORTB &= ~(1<<PB1);
+	for(u08 i = 0; i < 10; i++) {
+		PORTB ^= (1<<PB1);	
+		_delay_ms(100);
+	}		
+	//	init the openlog
+	open_log_init();	
+	open_log_reset_nack();
+	
+	gps_init();			//	init the UART0, gps info and NMEA processor
+	
+	//	deal with UART1 initialization
+ 	mux_init();			//	init the serial multiplexer on UART1
+	uart1Init();		//	set up our multiplexed UART1 port
+	uartSetBaudRate(1,9600);
+	sei();
+	
+	//	initialize our TIMER0 which counts milliseconds
+	DO_AND_WAIT(_init_timer0(),10);
+	
+	uartSendByte(1,0x0C);	//	clear the terminal
+	
+	//	some time stamps
+	rtc_millis = 0;
+	sensor_millis = 0;
+	warmer_64Hz_millis = 0;
+	
+	i2cInit();          //  initialize the I2C bus
+	
+	dx_indicator_init();
+	
+	flight_status.serial_channel = MUX_TERMINAL;
+	flight_status.terminal_input.state = TERMINAL_WAITING;
+	flight_status.terminal_input.timeout = millis() + 5000;		//	five seconds to respond
+	flight_status.event.gps_altitude_timeout = millis() + 10000;
+	terminal_init();
+	read_rtc();
+	////////////////////////////////////////////////////////////////////////
+	//	I2C bus initialization
+	//	Note that for unclear reasons, the BMP085 must be initialized first
+	//	followed by the TMP102 sensors.
+	/////////////////////////////////////////////////////////////////////////
+	_delay_ms(10);				    //  wait until stabilizes
+	
+	DO_AND_WAIT(_init_bmp085(),5);	//  init the barometric pressure sensor
+	DO_AND_WAIT(_init_tmp102(),5);	//	init the temperature monitors
+	DO_AND_WAIT(_init_rtc(),5);		//	init the real-time clock
+	DO_AND_WAIT(_init_warmers(),2);	//	init the warmers
+	hih4030_init();					//	initialize the humidity sensor
+	
+	while(1) {
+		u08 data;
+		if( uartReceiveByte(0,&data) ) 
+			uartSendByte(1,data);
+		_delay_ms(10);
+		wdt_reset();
+	}
+}
+/*
 int main(void)
 {
+	UCSR0B &= ~(1<<RXCIE0);	//	don't interrupt for USART0 RX (yet)
+	PCMSK3 &= ~(1<<PCINT24);	//	disable pin change interrupt PCINT24 which shared RXD0
 	DDRA &= ~0xFF;		//	PORTA (ADC is input for all channels)
 	DDRB |= (1<<PB1); PORTB &= ~(1<<PB1);
 	open_log_init();	
 	open_log_reset_nack();
 	mux_init();         //  setup UART1 & set terminal as output
-	gps_init();			//	init the UART0, gps info and NMEA processor
+	//gps_init();			//	init the UART0, gps info and NMEA processor
 	uart1Init();		//	set up our multiplexed UART1 port
 	uartSetBaudRate(1,9600);
 	sei();
@@ -143,11 +207,11 @@ int main(void)
 	flight_status.event.gps_altitude_timeout = millis() + 10000;
 	terminal_init();
 	read_rtc();
-	/*////////////////////////////////////////////////////////////////////////
-	/	I2C bus initialization
-	/	Note that for unclear reasons, the BMP085 must be initialized first
-	/	followed by the TMP102 sensors.
-	/////////////////////////////////////////////////////////////////////////*/
+	////////////////////////////////////////////////////////////////////////
+	//	I2C bus initialization
+	//	Note that for unclear reasons, the BMP085 must be initialized first
+	//	followed by the TMP102 sensors.
+	/////////////////////////////////////////////////////////////////////////
 	_delay_ms(10);				   //  wait until stabilizes
 	
 	DO_AND_WAIT(_init_bmp085(),5);	//  init the barometric pressure sensor
@@ -159,9 +223,9 @@ int main(void)
     {
 		uint32_t m = millis();
 		
-		/*	if we are waiting for the terminal input timer to expire and we reach the timeout
-			then say goodbye to the terminal and redirect the serial output to the OpenLog module
-			*/
+			//	if we are waiting for the terminal input timer to expire and we reach the timeout
+			//	then say goodbye to the terminal and redirect the serial output to the OpenLog module
+			//
 		if( flight_status.terminal_input.state == TERMINAL_WAITING ) {
 			if( m >= flight_status.terminal_input.timeout ) {
 				//	terminal did not register within timeout, so we will begin regular procedures
@@ -176,9 +240,9 @@ int main(void)
 			else {
 				if( !flight_status.should_ignore_serial_input  ) {
 					//	we're waiting for terminal input, so let's get a character
-					u08 terminal_data = uart1GetByte();
-					if( ((char)terminal_data != 0x00) ) {
-						if( (char)terminal_data != 0x0D )
+					u08 terminal_data;
+					if( uartReceiveByte(1,&terminal_data) ) {
+						if( terminal_data != 0x0D )
 							uartSendByte(1,(char)terminal_data);
 						terminal_process_char( (char)terminal_data );
 						flight_status.terminal_input.state = TERMINAL_SELECTED;
@@ -217,29 +281,23 @@ int main(void)
 			dx_indicator_update(m);
 		} // terminal is not waiting
 		else {
-			/*	NOTE: this code block is everything else that should happen in the main loop
-				but is not contingent on anything else; so, tasks that should always run
-				as frequently as possible, e.g. polling the GPS, looking for cell calls, etc.
-				*/
+				//	NOTE: this code block is everything else that should happen in the main loop
+				//	but is not contingent on anything else; so, tasks that should always run
+				//	as frequently as possible, e.g. polling the GPS, looking for cell calls, etc.
+				//
 			if( !flight_status.should_ignore_serial_input ) {
-				u08 terminal_data = uart1GetByte();
-				if( ((char)terminal_data != 0x00) ) {
-					terminal_process_char( (char)terminal_data );
-					if( (char)terminal_data != 0x0D )
-						uartSendByte(1,(char)terminal_data);
-				}	//	valid data on terminal
+				u08 terminal_data;
+				if( uartReceiveByte(1,&terminal_data) ) {
+					terminal_process_char( terminal_data );
+					if( terminal_data != 0x0D )
+						uartSendByte(1,terminal_data);
+				} //	valid data on terminal	
 			}	//	should not ignore serial data
-			/*
-			u16 gps_data = uart_getc();
-			if( (gps_data >> 8) != UART_NO_DATA && ((char)gps_data != 0x00)) {
-				gps_add_char(gps_data);
-				
-			}	//	valid data on the gps
-			*/
 		}	//	terminal mode
 		wdt_reset();
 	} //	main loop
 }	// main
+*/
 
 /************************************************************************/
 /* INITIALIZATION                                                       */
@@ -420,6 +478,7 @@ unsigned long millis()
 //  send environmental data to whichever UART1 vector is active
 //  
 void report_enviro(void) {
+	char buffer[60];
 	sprintf(buffer,"$ENV%02d%02d%02d",rtc.hour,rtc.minute,rtc.second);
     uartSendString(1,buffer);
 		

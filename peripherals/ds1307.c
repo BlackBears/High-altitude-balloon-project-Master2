@@ -9,6 +9,7 @@
 #include "../capabilities/i2c.h"
 #include "../common/global.h"
 #include <util/delay.h>
+#include "../capabilities/uart2.h"
 
 #define SQWE	(1<<4)
 #define RS0	(1<<0)
@@ -53,11 +54,12 @@ void ds1307_init(DS1307HourMode mode)
 	
 	/*	set the mode */
 	u08 hour = ds1307_read_register(DS1307_HOURS_ADDR);
-	if( mode == kDS1307Mode12HR )
+	if( mode == kDS1307Mode24HR )
 		hour &= ~HR;
 	else
 		hour |= HR;
 	ds1307_write_register(DS1307_HOURS_ADDR, hour);
+	hour_mode = HOUR_24;
 }
 
 u08 ds1307_seconds(void)
@@ -84,7 +86,7 @@ u08 ds1307_minutes(void)
 u08 ds1307_hours(void)
 {
 	u08 hours = ds1307_read_register(DS1307_HOURS_ADDR);
-	if( (hours & 0x40) == 0x40 ) {
+	if( hours & HR ) {
 		//	12 hour mode
 		hour_mode = HOUR_12;
 		ampm_mode=(hours & 0x20) >> 5;   // ampm_mode: 0-AM, 1-PM

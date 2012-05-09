@@ -5,7 +5,7 @@
     <ProjectVersion>6.0</ProjectVersion>
     <ToolchainName>com.Atmel.AVRGCC8</ToolchainName>
     <ProjectGuid>{b4d112dc-98bf-4a90-b714-0251ab8adce9}</ProjectGuid>
-    <avrdevice>ATmega644PA</avrdevice>
+    <avrdevice>ATmega644A</avrdevice>
     <avrdeviceseries>none</avrdeviceseries>
     <OutputType>Executable</OutputType>
     <Language>C</Language>
@@ -119,20 +119,20 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <ToolchainSettings>
       <AvrGcc>
-  <avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>True</avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>
-  <avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>True</avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>
-  <avrgcc.compiler.symbols.DefSymbols>
-    <ListValues>
-      <Value>F_CPU=16000000</Value>
-    </ListValues>
-  </avrgcc.compiler.symbols.DefSymbols>
-  <avrgcc.compiler.optimization.level>Optimize for size (-Os)</avrgcc.compiler.optimization.level>
-  <avrgcc.compiler.optimization.PackStructureMembers>True</avrgcc.compiler.optimization.PackStructureMembers>
-  <avrgcc.compiler.optimization.DebugLevel>Default (-g2)</avrgcc.compiler.optimization.DebugLevel>
-  <avrgcc.compiler.warnings.AllWarnings>True</avrgcc.compiler.warnings.AllWarnings>
-  <avrgcc.linker.miscellaneous.LinkerFlags>-Wl,-u,vfprintf -lprintf_flt  -lm</avrgcc.linker.miscellaneous.LinkerFlags>
-  <avrgcc.assembler.debugging.DebugLevel>Default (-Wa,-g)</avrgcc.assembler.debugging.DebugLevel>
-</AvrGcc>
+        <avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>True</avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>
+        <avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>True</avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>
+        <avrgcc.compiler.symbols.DefSymbols>
+          <ListValues>
+            <Value>F_CPU=16000000</Value>
+          </ListValues>
+        </avrgcc.compiler.symbols.DefSymbols>
+        <avrgcc.compiler.optimization.level>Optimize for size (-Os)</avrgcc.compiler.optimization.level>
+        <avrgcc.compiler.optimization.PackStructureMembers>True</avrgcc.compiler.optimization.PackStructureMembers>
+        <avrgcc.compiler.optimization.DebugLevel>Default (-g2)</avrgcc.compiler.optimization.DebugLevel>
+        <avrgcc.compiler.warnings.AllWarnings>True</avrgcc.compiler.warnings.AllWarnings>
+        <avrgcc.linker.miscellaneous.LinkerFlags>-Wl,-u,vfprintf -lprintf_flt  -lm</avrgcc.linker.miscellaneous.LinkerFlags>
+        <avrgcc.assembler.debugging.DebugLevel>Default (-Wa,-g)</avrgcc.assembler.debugging.DebugLevel>
+      </AvrGcc>
     </ToolchainSettings>
     <PostBuildEvent>
     </PostBuildEvent>
@@ -142,12 +142,6 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="capabilities\a2d.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="capabilities\altimeter.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="capabilities\altimeter.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="capabilities\buffer.c">
@@ -183,16 +177,10 @@
     <Compile Include="capabilities\rprintf.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="capabilities\uart-644a.c">
+    <Compile Include="capabilities\uart2.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="capabilities\uart-644a.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="capabilities\uart_addon.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="capabilities\uart_addon.h">
+    <Compile Include="capabilities\uart2.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="common\avrlibdefs.h">

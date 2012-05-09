@@ -13,7 +13,7 @@
 #include "../common/pindefs.h"
 #include "bmp085.h"
 //#include "../capabilities/vfd.h"
-#include "../capabilities/uart-644a.h"
+#include "../capabilities/uart2.h"
 
 #define BMP085_BASE_ADDRESS 0xEE
 #define BMP085_R 0xEF
@@ -155,7 +155,7 @@ long bmp085ReadPressure(void)
 #if BMP085_I2C_INTERRUPT == 0
 	u08 i2c_status = i2cMasterSendNI(BMP085_BASE_ADDRESS,2,data);
 	if( i2c_status != I2C_OK ) {
-		uart1_puts("*** ERROR: while reading barometric pressure ***");
+		uartSendString_P(1,"*** ERROR: while reading barometric pressure ***");
 	}
 #else
 	i2cMasterSend(BMP085_BASE_ADDRESS,2,data);

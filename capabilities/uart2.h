@@ -62,8 +62,9 @@
 #ifndef UART2_H
 #define UART2_H
 
-#include "global.h"
+#include "../common/global.h"
 #include "buffer.h"
+#include <avr/pgmspace.h>
 
 //! Default uart baud rate.
 /// This is the default speed after a uartInit() command,
@@ -102,7 +103,7 @@
 /// Value may be SIGNAL or INTERRUPT.
 /// \warning Do not change unless you know what you're doing.
 #ifndef UART_INTERRUPT_HANDLER
-#define UART_INTERRUPT_HANDLER	SIGNAL
+#define UART_INTERRUPT_HANDLER	ISR
 #endif
 
 // compatibility for the mega161

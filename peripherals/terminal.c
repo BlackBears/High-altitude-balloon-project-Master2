@@ -17,7 +17,6 @@
 #define CLEAR_RX_BUFFER term_buffer[0] = '\0'
 
 char term_buffer[MAX_TERM_BUFFER_LEN];
-char out_buffer[100];
 
 extern s16 get_internal_temperature();  //  implemented in main program file
 extern s16 get_external_temperature();  //  implemented in main program file
@@ -32,8 +31,6 @@ extern void rtc_set_time(time_t *time);
 extern void open_log_ls(char *buffer, size_t size);
 extern void set_serial_channel(mux_channel_t chan);
 extern void set_ignore_serial_data(BOOL state);
-
-
 
 uint16_t terminal_bandgap_voltage(void);
 
@@ -59,6 +56,7 @@ static void _terminal_print_prompt(void) {
 static void _terminal_print_error(u08 error_num) {
 	CLEAR_RX_BUFFER;
 	uartSendString_P(1,"\rERROR ");
+	char out_buffer[15];
 	sprintf(out_buffer,"%d\r",error_num);
 	uartSendString(1,out_buffer);
 	_terminal_print_prompt();
@@ -96,6 +94,7 @@ static uint16_t terminal_avg_bandgap_voltage(void) {
 }
 
 void terminal_process_char(char data) {
+	char out_buffer[20];
 	//sprintf(out_buffer,"%s\r",term_buffer); uartSendString(1,out_buffer);
     if( data == 0x0D ) {
         if( strcmp_P(term_buffer,PSTR("AT")) == 0 ) {
@@ -222,14 +221,14 @@ void terminal_process_char(char data) {
 			uartSendByte(1,0x1A);
 			uartSendByte(1,0x1A);
 			for(u16 timeout = 0; timeout < 1000; timeout++) {
-				u08 c = uart1_getc();
+				u08 c = uart1GetByte();
 				if( c == '>' ) {
 					success = TRUE;
 					break;
 				}
 				_delay_ms(1);
 			}
-			uart1_flush();
+			uartFlushReceiveBuffer(1);
 			set_serial_channel(MUX_TERMINAL);
 			if( success ) 
 				uartSendString_P(1,"\r+ CMD mode\r");
