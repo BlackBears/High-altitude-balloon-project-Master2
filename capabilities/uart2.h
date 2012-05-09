@@ -121,6 +121,9 @@
 	#define UBRR1L	UBRR1
 #endif
 
+// macros
+#define uartSendString_P(n,__s)   uartSendString_p(n,PSTR(__s))
+
 // functions
 
 //! Initializes UARTs.
@@ -208,6 +211,9 @@ u08 uartSendBuffer(u08 nUart, char *buffer, u16 nBytes);
 //! interrupt service handlers
 void uartTransmitService(u08 nUart);
 void uartReceiveService(u08 nUart);
+
+void uartSendString(u08 nUart, const char *s);
+void uartSendString_p(u08 nUart, const char *progmem_s);
 
 #endif
 
