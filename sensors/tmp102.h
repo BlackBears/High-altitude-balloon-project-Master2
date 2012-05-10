@@ -36,10 +36,8 @@ typedef struct {
 	tmp102_location_t location;
 	volatile s16 temperature;
 	volatile BOOL is_valid;
-	sensor_status_t status;
 } tmp102_t;
 
-void tmp102_set_pwr(tmp102_t *device, BOOL pwr_status);
 void tmp102_read_temp(tmp102_t *device);
 
 #endif /* TMP102_H_ */

@@ -347,16 +347,6 @@ void _init_tmp102(void) {
 	internal_temperature.location = TMP102_LOC_INT;
 	external_temperature.address = TMP102_ADDR_VCC;
 	external_temperature.location = TMP102_LOC_EXT;
-	//sprintf(buffer,"main: ET ADDR = %02X\r",external_temperature.address);
-	//uartSendString(1,buffer);
-	
-	//  power them up
-	DO_AND_WAIT(tmp102_set_pwr(&internal_temperature,TRUE),20);
-    tmp102_set_pwr(&external_temperature,TRUE);
-    
-    //  set our sensor status
-    internal_temperature.status.connect_attempts = 0;
-    external_temperature.status.connect_attempts = 0;
 }
 
 /*  READ SENSORS */
