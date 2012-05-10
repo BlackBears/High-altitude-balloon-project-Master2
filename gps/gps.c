@@ -11,6 +11,9 @@
 #include "../capabilities/nmea.h"
 #include <stdlib.h>
 
+#define BAUD 4800
+#include <util/setbaud.h>
+
 #define BUFFER_SIZE 80
 
 static char c_gpsData[BUFFER_SIZE];
@@ -19,11 +22,11 @@ static char c_gpsData[BUFFER_SIZE];
 //	peripheral to which the GPS is attached.
 //
 void gps_init() {
-	//c_gpsData = malloc(80 * sizeof(unsigned char));
 	bufferInit(&gpsBuffer,c_gpsData,BUFFER_SIZE);	//	initialize the cBuffer that holds our GPS data incoming
-	nmea_init();									//	initialize our NMEA processor
-	uart0Init();									//	initialize the UART0 with 4800 baud
-	uartSetBaudRate(0, 4800);  					
+	nmea_init();									//	initialize our NMEA processor	
+	UBRR0H = UBRRH_VALUE;		//	set the baud rate 4800 standard for GPS
+	UBRR0L = UBRRL_VALUE;
+	UCSR0B |= (1<<RXEN0);		//	just want to receive				
 }
 
 //
