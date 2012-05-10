@@ -18,6 +18,7 @@
 #include "buffer.h"
 #include "rprintf.h"
 #include "../gps/gps.h"
+#include "uart2.h"
 
 #define SKIP_TO_NEXT_FIELD_IN_PACKET while(packet[i++] != ',')
 // Program ROM constants
@@ -45,13 +46,14 @@ u08 nmea_process(cBuffer* rxBuffer)
 	u08 startFlag = FALSE;
 	//u08 data;
 	u16 i,j;
-
+	char s[20];
 	// process the receive buffer
 	// go through buffer looking for packets
 	while(rxBuffer->datalength) {
 		// look for a start of NMEA packet
 		if(bufferGetAtIndex(rxBuffer,0) == '$') {
 			// found start
+			uartSendString(1,"Packet start\r");
 			startFlag = TRUE;
 			// when start is found, we leave it intact in the receive buffer
 			// in case the full NMEA string is not completely received.  The
@@ -127,6 +129,7 @@ u08 nmea_process(cBuffer* rxBuffer)
 }
 
 void nmea_process_GPGGA(u08 *packet) {
+	uartSendString(1,"Processing GPGGA packet\r");
 	char *endptr;	//	pointer to the end of processed bit
 	char temp[6];
 	u08 i = 6;	//	begin parsing just after the GPGGA
