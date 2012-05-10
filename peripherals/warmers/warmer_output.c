@@ -8,8 +8,7 @@
 
 #define WARMER_OUTPUT_DEBUG 1
 #if WARMER_OUTPUT_DEBUG == 1
-#include "../../capabilities/uart-644a.h"
-char buffer[60];
+#include "../../capabilities/uart2.h"
 u08 debug_count;
 #endif
 
@@ -78,6 +77,7 @@ void warmer_update_64Hz(void) {
     u08 output_index = warmers[WARMER_BATTERY].pid.output.idx;
 #if WARMER_OUTPUT_DEBUG == 1
 	if( debug_count % 63 == 0) {
+		char buffer[60];
 		//sprintf(buffer,"scaled_pwr = %02d | idx = %02d\r",scaled_power_level,output_index);
 		//uart1_puts(buffer);	
 	}		
@@ -104,6 +104,7 @@ void warmer_update_8Hz(void) {
 #if WARMER_OUTPUT_DEBUG == 1
 	debug_count++;
 	if( debug_count % 63 == 0 ) {
+		char buffer[60];
 		sprintf(buffer,"Warmer c_temp = %02d | ttemp = %02d | r_pwr = %02d s_pwr = %02d\r",warmers[WARMER_BATTERY].current_temp,warmers[WARMER_BATTERY].target_temp,raw_power,warmers[WARMER_BATTERY].pid.output.power);
 		uartSendString(1,buffer);
 		debug_count = 0;
