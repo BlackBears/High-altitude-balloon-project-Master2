@@ -57,7 +57,7 @@ u08 device_data[2];
 /*	CALIBRATION VARIABLES */
 static short ac1 = 0;
 static short ac2 = 0; 
-static short ac3 - 0; 
+static short ac3 = 0; 
 static unsigned short ac4 = 0;
 static unsigned short ac5 = 0;
 static unsigned short ac6 = 0;
