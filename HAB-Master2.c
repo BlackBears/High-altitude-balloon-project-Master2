@@ -1,9 +1,15 @@
-/*
- * HAB_Master2.c
- *
- * Created: 4/13/2012 10:52:52 PM
- *  Author: Administrator
- */ 
+ /////////////////////////////////////////////////////////////////////////////////////////
+ //
+ //	File		: HAB_Master2.c
+ //	Author		: Alan K. Duncan <duncan.alan@mac.com>
+ //	Created		: 13 April 2012 10:52:52 PM
+ // Modified	: 10 May 2012 06:00:00 AM
+ // Version		: 1.0
+ //	Target MCU	: ATmega 644
+ //
+ //	This file is the main program file for the high altitude balloon controller.
+ //
+ //////////////////////////////////////////////////////////////////////////////////////////
 
 #define BAUD 9600
 
@@ -105,6 +111,13 @@ void set_ignore_serial_data(BOOL state);
 
 unsigned long millis();
 
+////////////////////////////////////////////////////////////////////////
+//	STATIC INLINE FUNCTIONS
+//
+//	These functions are broken out of the main run loop for clarity
+//
+////////////////////////////////////////////////////////////////////////
+
 static inline void initialize_i2c_peripherals(void) {
 	i2cInit();          //  initialize the I2C bus
 	
@@ -137,6 +150,13 @@ static inline void poll_gps(void) {
 		uartSendByte(1,UDR0);
 }
 
+//	
+//	update our warmers if we are using them
+//	at 64 Hz we modulate the output to the warmers by using pulse density modulation
+//	and at about 8 Hz we check the temperature response (feedback) and change the 
+//	power output based on that feedback.  In other words, this function updates the
+//	PID controller
+//
 static inline void update_warmers(uint32_t m) {
 #if USING_WARMERS == 1
 	//	update our warmer output at 64 Hz (~15 ms)
