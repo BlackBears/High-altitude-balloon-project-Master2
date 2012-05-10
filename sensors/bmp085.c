@@ -76,7 +76,7 @@ long bmp085ReadPressure(void);
 
 #define BMP085_SHOW_CALIBRATION_VALUES 0
 
-void bmp085_init(bmp085_t *device) {
+void bmp085_init(void) {
 	BMP085_Calibration();
 #if BMP085_SHOW_CALIBRATION_VALUES
 	char buffer[60];

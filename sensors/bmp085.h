@@ -19,14 +19,7 @@
 #include "../common/global.h"
 #include "../common/states.h"
 
-typedef struct {
-    volatile long temperature;
-    volatile long pressure;
-    BOOL is_valid;
-    sensor_status_t status;
-} bmp085_t;
-
-void bmp085_init(bmp085_t *device);
+void bmp085_init(void);
 void bmp085_convert(bmp085_t *device);
 void bmp085_convert2(long *temp1, long *press1);
 

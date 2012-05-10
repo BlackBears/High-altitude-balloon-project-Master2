@@ -45,7 +45,6 @@ time_t rtc;							// 	real-time clock
 warmer_t battery_warmer;			//	battery warmer structure
 tmp102_t internal_temperature;		//	internal temperature sensor
 tmp102_t external_temperature;		// 	external temperature sensor
-bmp085_t bmp085;					//	barometric pressure sensor
 static long temperature = 0;		//	temperature from BP sensor
 static long pressure = 0;			//	barometric pressure in Pascals (Pa)
 static u08 humidity = 0;			//	external humidity reading
@@ -308,16 +307,7 @@ void _init_warmers(void) {
 }
 
 void _init_bmp085(void) {
-	DO_AND_WAIT(bmp085_pwr_set(&bmp085, TRUE),20);	//	power on and stabilize
     bmp085_init(&bmp085);           //  initialize
-    
-    //  if unable to read calibration values, note error status for flight
-    if( !bmp085.is_valid ) {
-        bmp085.status.connect_attempts++;
-    }
-    else {
-        bmp085.status.status = k_peripheral_status_ok;  //  pressure monitor = OK
-    }
 }
 
 void _init_tmp102(void) {
