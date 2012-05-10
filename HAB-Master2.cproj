@@ -22,8 +22,7 @@
     <eraseonlaunchrule>0</eraseonlaunchrule>
     <AsfVersion>3.0.1</AsfVersion>
     <avrtoolinterface>ISP</avrtoolinterface>
-    <avrtool>
-    </avrtool>
+    <avrtool>com.atmel.avrdbg.tool.simulator</avrtool>
     <com_atmel_avrdbg_tool_simulator>
       <ToolType xmlns="">com.atmel.avrdbg.tool.simulator</ToolType>
       <ToolName xmlns="">AVR Simulator</ToolName>
