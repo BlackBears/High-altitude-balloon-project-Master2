@@ -11,7 +11,6 @@ void dx_indicator_init(void) {
 	DDR(DX_1_PORT) |= (1<<DX_1_PIN);
     DDR(DX_2_PORT) |= (1<<DX_2_PIN);
     DDR(DX_3_PORT) |= (1<<DX_3_PIN);
-    DDR(DX_4_PORT) |= (1<<DX_4_PIN);
 
     for(u08 i = 0; i < DX_INDICATOR_COUNT; i++) {
         dx_indicator_set_state(i,FALSE);
@@ -61,12 +60,6 @@ void dx_indicator_set_state(u08 index, BOOL state) {
                 DX_3_PORT |= (1<<DX_3_PIN);
             else
                 DX_3_PORT &= ~(1<<DX_3_PIN);
-            break;
-        case 3:
-            if( state )
-                DX_4_PORT |= (1<<DX_4_PIN);
-            else
-                DX_4_PORT &= ~(1<<DX_4_PIN);
             break;
     }
     dx_indicators[index].state = state;
