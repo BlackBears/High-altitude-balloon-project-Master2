@@ -47,7 +47,7 @@ typedef struct {
 	mux_channel_t serial_channel;		//  current vector of serial out
 	BOOL should_ignore_serial_input;	//	used to suppress interpretation of serial data
 	gps_fix_t current_fix;
-	terminal_input_t terminal_input;
+	terminal_input_t terminal;
 	periodic_timing_t event;
 } flight_status_t;
 

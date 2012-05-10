@@ -179,8 +179,8 @@ int main(void) {
 	dx_indicator_init();			//	init dx indicators
 	
 	flight_status.serial_channel = MUX_TERMINAL;
-	flight_status.terminal_input.state = TERMINAL_WAITING;
-	flight_status.terminal_input.timeout = millis() + 5000;		//	five seconds to respond
+	flight_status.terminal.state = TERMINAL_WAITING;
+	flight_status.terminal.timeout = millis() + 5000;		//	five seconds to respond
 	flight_status.event.gps_altitude_timeout = millis() + 10000;
 	
 	while(1) {
@@ -225,8 +225,8 @@ int main(void)
 	dx_indicator_init();
 	
 	flight_status.serial_channel = MUX_TERMINAL;
-	flight_status.terminal_input.state = TERMINAL_WAITING;
-	flight_status.terminal_input.timeout = millis() + 5000;		//	five seconds to respond
+	flight_status.terminal.state = TERMINAL_WAITING;
+	flight_status.terminal.timeout = millis() + 5000;		//	five seconds to respond
 	flight_status.event.gps_altitude_timeout = millis() + 10000;
 	terminal_init();
 	read_rtc();
@@ -249,10 +249,10 @@ int main(void)
 			//	if we are waiting for the terminal input timer to expire and we reach the timeout
 			//	then say goodbye to the terminal and redirect the serial output to the OpenLog module
 			//
-		if( flight_status.terminal_input.state == TERMINAL_WAITING ) {
-			if( m >= flight_status.terminal_input.timeout ) {
+		if( flight_status.terminal.state == TERMINAL_WAITING ) {
+			if( m >= flight_status.terminal.timeout ) {
 				//	terminal did not register within timeout, so we will begin regular procedures
-				flight_status.terminal_input.state = TERMINAL_OFF;
+				flight_status.terminal.state = TERMINAL_OFF;
 				uartSendString_P(1,"\rTerminal timed out\r");
 				uartSendString_P(1,"Bye\r");
 				//  redirect logging to the OpenLog
@@ -268,12 +268,12 @@ int main(void)
 						if( terminal_data != 0x0D )
 							uartSendByte(1,(char)terminal_data);
 						terminal_process_char( (char)terminal_data );
-						flight_status.terminal_input.state = TERMINAL_SELECTED;
+						flight_status.terminal.state = TERMINAL_SELECTED;
 					}	//	valid data on terminal
 				}	// mux terminal is active channel
 			}	//	terminal wait did NOT timeout
 		}	//	terminal waiting
-		else if( flight_status.terminal_input.state == TERMINAL_OFF ) {
+		else if( flight_status.terminal.state == TERMINAL_OFF ) {
 			if( m - rtc_millis >= 1000) {
 				read_rtc();
 				rtc_millis = m;	
