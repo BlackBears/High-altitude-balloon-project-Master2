@@ -21,7 +21,7 @@
 #include "i2c.h"
 
 #include "rprintf.h"	// include printf function library
-#include "uart-644a.h"
+#include "uart2.h"
 
 // Standard I2C bit rates are:
 // 100KHz for slow speed
