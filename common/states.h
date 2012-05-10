@@ -25,14 +25,6 @@ typedef u08 peripheral_status_t;
 #define PWR_ON  1
 #define PWR_OFF 0
 
-typedef struct {
-    peripheral_status_t status;
-    u08 power;                      //  PWR_ON or PWR_OFF
-    u08 connect_attempts;           //  # times attempted to connect to slave
-    
-} sensor_status_t;
-
-
 
 enum {
 	TERMINAL_WAITING,
