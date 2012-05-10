@@ -39,7 +39,7 @@ typedef struct {
     warmer_pid_t pid;       //  PID controller
 } warmer_t;
 
-volatile warmer_t warmers[3];
+volatile warmer_t warmers[1];
 
 void warmer_controller_init(void);
 void warmer_read_temp(u08 idx);
