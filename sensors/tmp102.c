@@ -33,7 +33,7 @@
 #define TMP102_LOW_REG		0x02
 #define TMP102_HIGH_REG		0x03
 
-char buffer[60];
+
 
 void tmp102_set_pwr(tmp102_t *device, BOOL pwr_status) {
     if( device->location == TMP102_LOC_INT ) {
