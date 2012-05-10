@@ -93,6 +93,7 @@ void read_rtc(void);
 void read_sensors(void);
 void report_enviro(void);
 
+/*	FUNCTIONS USED FOR EXTERNAL ACCESS */
 BOOL internal_temperature_power();
 BOOL external_temperature_power();
 void set_internal_temperature_power(BOOL status);
@@ -103,6 +104,54 @@ void set_serial_channel(mux_channel_t chan);
 void set_ignore_serial_data(BOOL state);
 
 unsigned long millis();
+
+static inline void initialize_i2c_peripherals(void) {
+	i2cInit();          //  initialize the I2C bus
+	
+	read_rtc();
+	////////////////////////////////////////////////////////////////////////
+	//	I2C bus initialization
+	//	Note that for unclear reasons, the BMP085 must be initialized first
+	//	followed by the TMP102 sensors.
+	/////////////////////////////////////////////////////////////////////////
+	_delay_ms(10);				    //  wait until stabilizes
+	
+	DO_AND_WAIT(_init_bmp085(),5);	//  init the barometric pressure sensor
+	DO_AND_WAIT(_init_tmp102(),5);	//	init the temperature monitors
+	DO_AND_WAIT(_init_rtc(),5);		//	init the real-time clock
+	DO_AND_WAIT(_init_warmers(),2);	//	init the warmers
+}
+
+static inline void initialize_uart1(void) {
+	//	deal with UART1 initialization
+ 	mux_init();				//	init the serial multiplexer on UART1
+	uart1Init();			//	set up our multiplexed UART1 port
+	uartSetBaudRate(1,9600);
+	sei();
+	uartSendByte(1,0x0C);	//	clear the terminal
+	terminal_init();
+}
+
+static inline void poll_gps(void) {
+	if( UCSR0A & (1<<RXC0) ) 
+		uartSendByte(1,UDR0);
+}
+
+static inline void update_warmers(uint32_t m) {
+#if USING_WARMERS == 1
+	//	update our warmer output at 64 Hz (~15 ms)
+	if( m - warmer_64Hz_millis > 16) {
+		warmer_update_64Hz();       //  update the controller output at 64Hz
+		//  execute control update every 8 steps (64 Hz/8 = 8 Hz)
+		if( ++warmer_8Hz_div == 8) {
+			warmer_update_8Hz();
+			warmer_8Hz_div = 0;
+		}	//	8 Hz update
+		warmer_64Hz_millis = m;
+	}	//	64 Hz update
+#endif
+}
+
 
 #define USING_WARMERS 1
 #define FORCE_SERIAL_OUTPUT_TERMINAL 1
@@ -121,46 +170,28 @@ int main(void) {
 	open_log_reset_nack();
 	
 	gps_init();			//	init the UART0, gps info and NMEA processor
-	
-	//	deal with UART1 initialization
- 	mux_init();				//	init the serial multiplexer on UART1
-	uart1Init();			//	set up our multiplexed UART1 port
-	uartSetBaudRate(1,9600);
-	sei();
-	uartSendByte(1,0x0C);	//	clear the terminal
+	initialize_uart1();	//	init the interface and clear terminal
 	
 	//	initialize our TIMER0 which counts milliseconds
 	DO_AND_WAIT(_init_timer0(),10);
 	
-	
-	i2cInit();          //  initialize the I2C bus
-	
-	dx_indicator_init();
+	hih4030_init();					//	initialize the humidity sensor
+	dx_indicator_init();			//	init dx indicators
 	
 	flight_status.serial_channel = MUX_TERMINAL;
 	flight_status.terminal_input.state = TERMINAL_WAITING;
 	flight_status.terminal_input.timeout = millis() + 5000;		//	five seconds to respond
 	flight_status.event.gps_altitude_timeout = millis() + 10000;
-	terminal_init();
-	read_rtc();
-	////////////////////////////////////////////////////////////////////////
-	//	I2C bus initialization
-	//	Note that for unclear reasons, the BMP085 must be initialized first
-	//	followed by the TMP102 sensors.
-	/////////////////////////////////////////////////////////////////////////
-	_delay_ms(10);				    //  wait until stabilizes
-	
-	DO_AND_WAIT(_init_bmp085(),5);	//  init the barometric pressure sensor
-	DO_AND_WAIT(_init_tmp102(),5);	//	init the temperature monitors
-	DO_AND_WAIT(_init_rtc(),5);		//	init the real-time clock
-	DO_AND_WAIT(_init_warmers(),2);	//	init the warmers
-	hih4030_init();					//	initialize the humidity sensor
 	
 	while(1) {
-		if( UCSR0A & (1<<RXC0) ) 
-			uartSendByte(1,UDR0);
-			
-		wdt_reset();
+		//	complete the tasks that are not contingent on anything else
+		//	such as polling the GPS, checking for cellular calls, etc
+		wdt_reset();				//  kick the watchdog
+		poll_gps();					//	does gps have a character?
+		uint32_t m = millis();		//	get our current ms time
+		dx_indicator_update(m);		//	update the dx indicators
+		update_warmers(m);			//	update our warmers (e.g. battery etc.)
+		
 	}
 }
 /*
@@ -307,7 +338,7 @@ void _init_warmers(void) {
 }
 
 void _init_bmp085(void) {
-    bmp085_init(&bmp085);           //  initialize
+    bmp085_init();           	//  initialize
 }
 
 void _init_tmp102(void) {
