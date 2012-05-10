@@ -89,14 +89,6 @@ void bmp085_init(bmp085_t *device) {
 #endif
 }
 
-void bmp085_pwr_set(bmp085_t *device, BOOL pwr_state) {
-    DDR(BMP085_PWR_PORT) |= (1<<BMP085_PWR_PIN);
-    if( pwr_state )
-        BMP085_PWR_PORT |= (1<<BMP085_PWR_PIN);
-    else
-        BMP085_PWR_PORT &= ~(1<<BMP085_PWR_PIN);
-}
-
 void BMP085_Calibration(void)
 {
 	ac1 = bmp085ReadShort(0xAA);
