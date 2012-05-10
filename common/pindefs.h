@@ -25,13 +25,11 @@
 /*  DX INDICATORS */
 #define DX_INDICATOR_PORT   PORTB
 #define DX_1_PORT           DX_INDICATOR_PORT
-#define DX_1_PIN            4
+#define DX_1_PIN            1
 #define DX_2_PORT           DX_INDICATOR_PORT
-#define DX_2_PIN            5
+#define DX_2_PIN            2
 #define DX_3_PORT           DX_INDICATOR_PORT
-#define DX_3_PIN            6
-#define DX_4_PORT           DX_INDICATOR_PORT
-#define DX_4_PIN            7
+#define DX_3_PIN            3
 
 /*  SERIAL MULTIPLEXER */
 #define SERIAL_MUX_PORT     PORTD

@@ -41,7 +41,7 @@
 
 #include "../common/global.h"
 
-#define DX_INDICATOR_COUNT 4
+#define DX_INDICATOR_COUNT 3
 
 typedef struct {
     u08 count;      //  times to flash
