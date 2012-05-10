@@ -20,7 +20,7 @@
 #include "../common/states.h"
 
 void bmp085_init(void);
-void bmp085_convert(bmp085_t *device);
+void bmp085_convert(void);
 void bmp085_convert2(long *temp1, long *press1);
 
 void bmp085Convert(long* temperature, long* pressure);
