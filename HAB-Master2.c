@@ -158,10 +158,9 @@ int main(void) {
 	hih4030_init();					//	initialize the humidity sensor
 	
 	while(1) {
-		u08 data;
-		if( uartReceiveByte(0,&data) ) 
-			uartSendByte(1,data);
-		_delay_ms(10);
+		if( UCSR0A & (1<<RXC0) ) 
+			uartSendByte(1,UDR0);
+			
 		wdt_reset();
 	}
 }
