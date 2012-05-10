@@ -9,7 +9,7 @@
 #include <util/setbaud.h>
 #include "openlog.h"
 #include "../common/pindefs.h"
-#include "../capabilities/uart-644a.h"
+#include "../capabilities/uart2.h"
 //#include "../capabilities/vfd.h"
 #include <avr/io.h>
 #include <avr/pgmspace.h>
@@ -53,9 +53,9 @@ void open_log_ls(char *buffer, size_t size) {
 	
 	u08 index = 0;
 	while( 1 ) {
-		u16 c = uart1GetByte();
-		if( (c<<8) != UART_NO_DATA ) {
-			buffer[index++] = c;
+		u08 data = 0;
+		if( uartReceiveByte(1,&data) ) {
+			buffer[index++] = data;
 		}
 		if( index >= size ) {
 			buffer[index] = '\0';
