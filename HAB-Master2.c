@@ -100,10 +100,6 @@ void read_sensors(void);
 void report_enviro(void);
 
 /*	FUNCTIONS USED FOR EXTERNAL ACCESS */
-BOOL internal_temperature_power();
-BOOL external_temperature_power();
-void set_internal_temperature_power(BOOL status);
-void set_external_temperature_power(BOOL status);
 void rtc_read_time(time_t *time);
 void rtc_set_time(time_t *time);
 void set_serial_channel(mux_channel_t chan);
@@ -146,8 +142,8 @@ static inline void initialize_uart1(void) {
 }
 
 static inline void poll_gps(void) {
-	if( UCSR0A & (1<<RXC0) ) 
-		uartSendByte(1,UDR0);
+	//if( UCSR0A & (1<<RXC0) )  { gps_add_char(UDR0); }
+	if( UCSR0A & (1<<RXC0) )  { uartSendByte(1,UDR0); }
 }
 
 //	
@@ -185,6 +181,7 @@ int main(void) {
 		PORTB ^= (1<<PB1);	
 		_delay_ms(100);
 	}		
+	
 	//	init the openlog
 	open_log_init();	
 	open_log_reset_nack();
@@ -195,7 +192,7 @@ int main(void) {
 	//	initialize our TIMER0 which counts milliseconds
 	DO_AND_WAIT(_init_timer0(),10);
 	
-	hih4030_init();					//	initialize the humidity sensor
+	//hih4030_init();					//	initialize the humidity sensor
 	dx_indicator_init();			//	init dx indicators
 	
 	flight_status.serial_channel = MUX_TERMINAL;
@@ -209,8 +206,8 @@ int main(void) {
 		wdt_reset();				//  kick the watchdog
 		poll_gps();					//	does gps have a character?
 		uint32_t m = millis();		//	get our current ms time
-		dx_indicator_update(m);		//	update the dx indicators
-		update_warmers(m);			//	update our warmers (e.g. battery etc.)
+		//dx_indicator_update(m);		//	update the dx indicators
+		//update_warmers(m);			//	update our warmers (e.g. battery etc.)
 		
 	}
 }
@@ -411,26 +408,6 @@ void read_sensors(void) {
 	
 }
 
-/************************************************************************/
-/*  SENSOR POWER                                                        *
-/************************************************************************/
-
-BOOL internal_temperature_power() {
-    return internal_temperature.status.power;
-}
-
-BOOL external_temperature_power() {
-    return external_temperature.status.power;
-}
-
-void set_internal_temperature_power(BOOL status) {
-    tmp102_set_pwr(&internal_temperature,status);
-}
-
-void set_external_temperature_power(BOOL status) {
-    tmp102_set_pwr(&external_temperature,status);
-}
-
 
 /************************************************************************/
 /* TIMEKEEPING                                                          */
@@ -483,14 +460,15 @@ ISR(TIMER0_COMPA_vect)
 unsigned long millis()
 {
    unsigned long m;
-   uint8_t oldSREG = SREG;
+   //uint8_t oldSREG = SREG;
 
    // disable interrupts while we read timer0_millis or we might get an
    // inconsistent value (e.g. in the middle of a write to timer0_millis)
-   cli();
+   //cli();
    m = timer0_millis;
-   SREG = oldSREG;
-
+   //SREG = oldSREG;
+  // sei();
+   
    return m;
 }
 
