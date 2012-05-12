@@ -19,7 +19,6 @@
 //	peripheral to which the GPS is attached.
 //
 void gps_init() {
-	bufferInit(&gpsBuffer,c_gpsData,BUFFER_SIZE);	//	initialize the cBuffer that holds our GPS data incoming
 	nmea_init();									//	initialize our NMEA processor	
 	UBRR0H = UBRRH_VALUE;		//	set the baud rate 4800 standard for GPS
 	UBRR0L = UBRRL_VALUE;
