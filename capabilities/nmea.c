@@ -20,199 +20,175 @@
 #include "../gps/gps.h"
 #include "uart2.h"
 
-#define SKIP_TO_NEXT_FIELD_IN_PACKET while(packet[i++] != ',')
-// Program ROM constants
+#define BUFFER_LEN 80
+#define NMEA_DEBUG 1
 
-// Global variables
-extern gps_info_t gps_info;
-u08 nmea_packet[NMEA_BUFFERSIZE];
+//	shorthand macro to skip to the next comma-delimited field
+#define SKIP_TO_NEXT_FIELD_IN_PACKET while(packet[i++] != ',');
 
-void nmea_process_GPGGA(u08 *packet);
-void nmea_process_GPVTG(u08 *packet);
+//	set DEBUG_NMEA to 1 to log parsing events, state changes, etc.
+#define DEBUG_NMEA 1
+#if DEBUG_NMEA == 1
+#define DEBUG_PRINT(a) printf(a)
+#else
+#define DEBUG_PRINT(a) //
+#endif
 
-void nmea_init(void)
-{
-	// currently empty implementation
+//	
+//	state machine for the NMEA parser
+//
+nmeaState state;
+
+uint8_t process_vtg_packet();
+uint8_t process_gga_packet();
+
+char packet[BUFFER_LEN];
+uint8_t idx;
+
+void nmeaInit(void) {
+    state = NMEA_IDLE;		//	state machine starts in idle
 }
 
-u08* nmea_get_packet_buffer(void)
-{
-	return nmea_packet;
+void nmeaAddChar(uint8_t data) {
+    switch( state ) {
+        case NMEA_IDLE:
+            if( data == '$' ) {
+            	//	$ is start character, start condition set
+                state = NMEA_START;
+                DEBUG_PRINT("Detected NMEA_START\r");
+                idx = 0;
+                packet[idx++] = data;
+            }
+            break;
+        case NMEA_START:
+        	//	continue accumulating
+            state = NMEA_ACCUMULATE;
+            DEBUG_PRINT("NMEA_ACCUMULATE\r");
+            packet[idx++] = data;
+            if( idx > BUFFER_LEN) {
+                idx = 0;
+                state = NMEA_IDLE;
+            }
+            break;
+        case NMEA_ACCUMULATE:
+            if( data == '\r' ) {
+                state = NMEA_COMPLETE;
+#if DEBUG_NMEA
+                printf("NMEA_COMPLETE: %d\r",idx);
+#endif
+                if( strstr(packet, "VTG") ) {
+                    DEBUG_PRINT("VTG PACKET FOUND\r");
+                    process_vtg_packet();
+                }
+                else if( strstr(packet, "GGA") ) {
+                    DEBUG_PRINT("GGA PACKET FOUND\r");
+                    process_gga_packet();
+                }
+                state = NMEA_IDLE;
+                idx = 0;
+                DEBUG_PRINT("NMEA_IDLE\r");
+            }
+            else {
+                packet[idx++] = data;
+                if( idx > BUFFER_LEN) {
+                    idx = 0;
+                    state = NMEA_IDLE;
+                    DEBUG_PRINT("NMEA_IDLE (A)\r");
+                }
+                break;
+            }
+            break;
+    }
 }
 
-u08 nmea_process(cBuffer* rxBuffer)
-{
-	u08 foundpacket = NMEA_NODATA;
-	u08 startFlag = FALSE;
-	//u08 data;
-	u16 i,j;
-	char s[20];
-	// process the receive buffer
-	// go through buffer looking for packets
-	while(rxBuffer->datalength) {
-		// look for a start of NMEA packet
-		if(bufferGetAtIndex(rxBuffer,0) == '$') {
-			// found start
-			uartSendString(1,"Packet start\r");
-			startFlag = TRUE;
-			// when start is found, we leave it intact in the receive buffer
-			// in case the full NMEA string is not completely received.  The
-			// start will be detected in the next nmeaProcess iteration.
-
-			// done looking for start
-			break;
-		}
-		else
-			bufferGetFromFront(rxBuffer);
-	}
-	
-	// if we detected a start, look for end of packet
-	if(startFlag) {
-		for(i=1; i<(rxBuffer->datalength)-1; i++) {
-			// check for end of NMEA packet <CR><LF>
-			if((bufferGetAtIndex(rxBuffer,i) == '\r') && (bufferGetAtIndex(rxBuffer,i+1) == '\n')) {
-				// have a packet end
-				// dump initial '$'
-				bufferGetFromFront(rxBuffer);
-				// copy packet to nmea_packet
-				for(j=0; j<(i-1); j++) {
-					// although NMEA strings should be 80 characters or less,
-					// receive buffer errors can generate erroneous packets.
-					// Protect against packet buffer overflow
-					if(j<(NMEA_BUFFERSIZE-1))
-						nmea_packet[j] = bufferGetFromFront(rxBuffer);
-					else
-						bufferGetFromFront(rxBuffer);
-				}
-				// null terminate it
-				nmea_packet[j] = 0;
-				// dump <CR><LF> from rxBuffer
-				bufferGetFromFront(rxBuffer);
-				bufferGetFromFront(rxBuffer);
-
-				#ifdef NMEA_DEBUG_PKT
-				rprintf("Rx NMEA packet type: ");
-				rprintfStrLen(nmea_packet, 0, 5);
-				rprintfStrLen(nmea_packet, 5, (i-1)-5);
-				rprintfCRLF();
-				#endif
-				// found a packet
-				// done with this processing session
-				foundpacket = NMEA_UNKNOWN;
-				break;
-			}
-		}
-	}
-
-	if( foundpacket )
-	{
-		// check message type and process appropriately
-		if(!strncmp(nmea_packet, "GPGGA", 5)) {
-			// process packet of this type
-			nmea_process_GPGGA(nmea_packet);
-			// report packet type
-			foundpacket = NMEA_GPGGA;
-		}	// process found $GPGGA packet
-		else if(!strncmp(nmea_packet, "GPVTG", 5)) {
-			// process packet of this type
-			nmea_process_GPVTG(nmea_packet);
-			// report packet type
-			foundpacket = NMEA_GPVTG;
-		}	//	process found $GPVTG packet
-	}
-	else if(rxBuffer->datalength >= rxBuffer->size) {
-		// if we found no packet, and the buffer is full
-		// we're logjammed, flush entire buffer
-		bufferFlush(rxBuffer);
-	}
-	return foundpacket;
+uint8_t process_vtg_packet() {
+    uint8_t i = 7;	//begin immediately after the "$GPRMC"
+    //	attempt to reject empty packets right away
+    if( packet[i] == ',' && packet[i+1] == ',') { return 0;}
+    
+    gpsInfo.h_track.course = atof(&packet[i]);
+    printf("\tDEGREES: %0.1f\r",gpsInfo.h_track.course);
+    
+    
+    //	next field is T for track
+    SKIP_TO_NEXT_FIELD_IN_PACKET;
+    //	then mag track
+    SKIP_TO_NEXT_FIELD_IN_PACKET;
+    // then M for magnetic
+    SKIP_TO_NEXT_FIELD_IN_PACKET
+    // then GS in knots
+    SKIP_TO_NEXT_FIELD_IN_PACKET
+    gpsInfo.h_track.velocity = atof(&packet[i]);
+    
+    printf("\tVELOCITY = %0.1f\r",gpsInfo.h_track.velocity);
+    
+    return 1;
 }
 
-void nmea_process_GPGGA(u08 *packet) {
-	uartSendString(1,"Processing GPGGA packet\r");
-	char *endptr;	//	pointer to the end of processed bit
-	char temp[6];
-	u08 i = 6;	//	begin parsing just after the GPGGA
-	u08 i_temp,i_temp2;	//	scratchpad
-	//	attempt to reject empty packets right away
-	if( packet[i] == "," && packet[i+i] == "," ) { return; }
-	//	first field is hour UTC
-	strncpy(temp,&packet[i],2);
-	gps_info.fix.time.hour = atoi(temp);
-	//	next is minutes UTC
-	i += 2;
-	strncpy(temp,&packet[i],2);
-	gps_info.fix.time.minute = atoi(temp);
-	//	next field is seconds UTC
-	i += 2;
-	strncpy(temp,&packet[i],2);
-	gps_info.fix.time.second = atoi(temp);
-	
-	//	next field is latitude
-	SKIP_TO_NEXT_FIELD_IN_PACKET;
-	strncpy(temp,&packet[i],2);
-	gps_info.fix.latitude = atof(temp);	//	whole degrees latitude
-	i += 2;	//	advance to latitude minutes;
-	strncpy(temp,&packet[i],2);
-	//i_temp = atoi(temp);	//	i_temp is the minutes latitude
-	while( packet[i++] != '.' );	//	advance to fractional minutes
-	//i_temp2 = atoi(&packet[i]);		//	fractional minutes
-	gps_info.fix.latitude += (float)i_temp/60.0f + (float)i_temp2/3600.0f;
-	
-	//	next field is the N/S indicator for latitude
-	SKIP_TO_NEXT_FIELD_IN_PACKET;
-	if( packet[i] = 'S') { gps_info.fix.latitude = -gps_info.fix.latitude; }
-	
-	//	next field is the longitude
-	SKIP_TO_NEXT_FIELD_IN_PACKET;
-	strncpy(temp,&packet[i],3); temp[3] = '\0';
-	//gps_info.fix.longitude = atof(temp);	//	whole degrees longitude
-	i += 3;	//	advance to latitude minutes;
-	strncpy(temp,&packet[i],2); temp[2] = '\0';
-	//i_temp = atoi(temp); 	//	i_temp is the minutes latitude
-	while( packet[i++] != '.' );	//	advance to fractional minutes
-	//i_temp2 = atoi(&packet[i]);		//	fractional minutes
-	gps_info.fix.longitude += (float)i_temp/60.0f + (float)i_temp2/3600.0f;
-	
-	//	next field is the E/W indicator for longitude
-	SKIP_TO_NEXT_FIELD_IN_PACKET;
-	if( packet[i] = 'W') { gps_info.fix.longitude = -gps_info.fix.longitude; }
-		
-	//	next field is the fix quality
-	SKIP_TO_NEXT_FIELD_IN_PACKET;
-	
-	//	next field is the satellite count
-	SKIP_TO_NEXT_FIELD_IN_PACKET;
-	
-	//	next field is the h dilution of position
-	SKIP_TO_NEXT_FIELD_IN_PACKET;
-	
-	//	next field is the altitude in meters
-	SKIP_TO_NEXT_FIELD_IN_PACKET;
-	//gps_info.fix.altitude = atof(&packet[i]);
+uint8_t process_gga_packet() {
+    char temp[6];
+    uint8_t i_temp,i_temp2;
+    uint8_t i = 7;	//begin immediately after the "$GPGGA"
+    //	attempt to reject empty packets right away
+    if( packet[i] == ',' && packet[i+1] == ',') { return 0;}
+    
+    //	first field is hour UTC
+    strncpy(temp,&packet[i],2);
+    gpsInfo.fix.time.hour = atoi(temp);
+    i += 2;	//	advance to minutes time UTC
+    strncpy(temp,&packet[i],2);
+    gpsInfo.fix.time.minute = atoi(temp);
+    i += 2; //	advance to seconds time UTC
+    strncpy(temp,&packet[i],2);
+    gpsInfo.fix.time.second = atoi(temp);
+    
+    
+    while(packet[i++] != ',');	// next field is latitude
+    strncpy(temp,&packet[i],2);
+    gpsInfo.fix.latitude = atof(temp);
+    i += 2;		// advance to latitude minutes;
+    strncpy(temp,&packet[i],2);
+    i_temp = atoi(temp);	// i_temp is the minutes latitude
+    while( packet[i++] != '.' );	// advance to fractional minutes
+    i_temp2 = atoi(&packet[i]);		// fractional minutes
+    gpsInfo.fix.latitude += (float)i_temp/60.0f + (float)i_temp2/3600.0f;
+    
+    while(packet[i++] != ',');	// next field is N/s indicator
+    if( packet[i] == 'S' ) { gpsInfo.fix.latitude = -gpsInfo.fix.latitude; }
+    
+    while(packet[i++] != ',');	// next field if longitude
+    strncpy(temp,&packet[i],3); temp[3] = '\0';
+    gpsInfo.fix.longitude = atof(temp);
+    i += 3;		// advance to longitude minutes;
+    strncpy(temp,&packet[i],2); temp[2] = '\0';
+    i_temp = atoi(temp);	// i_temp is the minutes longitude
+    while( packet[i++] != '.' );	// advance to fractional minutes
+    i_temp2 = atoi(&packet[i]);		// fractional minutes
+    gpsInfo.fix.longitude += (float)i_temp/60.0f + (float)i_temp2/3600.0f;
+    
+    // next field is the E/W indicator
+    while(packet[i++] != ',');
+    if( packet[i] == 'W' ) { gpsInfo.fix.longitude = -gpsInfo.fix.longitude; }
+    
+    printf("degrees is %0.6f\r",gpsInfo.fix.longitude);
+    
+    // next field is the fix quality
+    while(packet[i++] != ',');
+    printf("SAT QUAL = %d\r",atoi(&packet[i]));
+    
+    // next field is the satellite number
+    while(packet[i++] != ',');
+    printf("SAT NUM = %d\r",atoi(&packet[i]));
+    
+    // next field is the h dilution of position
+    while(packet[i++] != ',');
+    printf("H DIL POS = %0.1f\r",atof(&packet[i]));
+    
+    // next field is the altitude in meters
+    while(packet[i++] != ',');
+    gpsInfo.fix.altitude = atof(&packet[i]);
+    
+    printf("ALT = %0.1fm\r",gpsInfo.fix.altitude);
+    return 1;
 
-}
-
-void nmea_process_GPVTG(u08 *packet) {
-	char *endptr;	//	pointer to the end of processed bit
-	char temp[6];
-	u08 i = 6;	//	begin parsing just after the sentence identifier
-	
-	// attempt to reject empty packets right away
-	if( packet[i] == "," && packet[i+i] == "," ) { return; }
-	
-	//	first field is the true track made good in degrees
-	gps_info.h_track.track_angle = atof(&packet[i]);
-	
-	//	next field is T for track
-	SKIP_TO_NEXT_FIELD_IN_PACKET;
-	//	next is the magnetic track
-	SKIP_TO_NEXT_FIELD_IN_PACKET;
-	//  next field is the M for magnetic
-	SKIP_TO_NEXT_FIELD_IN_PACKET;
-	//	next field is the GS in knots
-	SKIP_TO_NEXT_FIELD_IN_PACKET; 
-	gps_info.h_track.velocity = atof(&packet[i]);
-	
-	//	we can skip the rest of the packet
 }
