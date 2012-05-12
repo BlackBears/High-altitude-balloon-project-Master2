@@ -37,23 +37,5 @@ typedef struct {
     BOOL new_second;
 } time_t;
 
-typedef struct {
-    float latitude;		//	fractional degrees
-	float longitude;	//	fractional degrees
-	float altitude;		//	meters
-	BOOL valid;			//	is this a valid fix?
-    time_t time;
-} gps_fix_t;
-
-typedef struct {
-	float velocity;		//	horizontal speed (ground speed in knots)
-	float track_angle;	//	course
-} gps_course_t;
-
-typedef struct {
-	gps_fix_t fix;			//	fix
-	gps_course_t h_track;	//	horizontal track
-} gps_info_t;
-
 
 #endif /* TYPES_H_ */
