@@ -404,8 +404,6 @@ void read_sensors(void) {
 	if( rtc.second % 15 == 0) {
 		humidity = hih4030_compensated_rh(external_temperature.temperature);
 	}
-	
-	
 }
 
 
