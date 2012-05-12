@@ -13,8 +13,25 @@
 #include "../common/types.h"
 #include "../capabilities/buffer.h"
 
-gps_info_t gps_info;
-cBuffer *gpsBuffer;
+typedef struct {
+	float latitude;
+	float longitude;
+	float altitude;
+	rtc time;
+	uint8_t valid;
+} gps_fix_t;
+
+typedef struct {
+	float velocity;			//	ground speed in knots
+	float course;			//	course in degrees
+} gps_course_t;
+
+typedef struct {
+	gps_fix_t fix;			//	fix
+	gps_course_t h_track;	//	horizontal course (from RMC sentence)
+} gps_info_t;
+
+gps_info_t gpsInfo;
 
 void gps_init();
 void gps_add_char(u08 data);

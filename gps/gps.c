@@ -14,9 +14,6 @@
 #define BAUD 4800
 #include <util/setbaud.h>
 
-#define BUFFER_SIZE 80
-
-static char c_gpsData[BUFFER_SIZE];
 //
 //	Initializes our cBuffer, the NMEA processor, and the UART0 
 //	peripheral to which the GPS is attached.
@@ -34,6 +31,5 @@ void gps_init() {
 //	the buffer as candidate packet
 //
 void gps_add_char(u08 data) {
-	bufferAddToEnd(gpsBuffer,(unsigned char)data);
-	nmea_process(gpsBuffer);
+	nmeaAddChar(data);
 }
