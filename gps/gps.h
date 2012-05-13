@@ -17,7 +17,7 @@ typedef struct {
 	float latitude;
 	float longitude;
 	float altitude;
-	rtc time;
+	time_t time;
 	uint8_t valid;
 } gps_fix_t;
 
