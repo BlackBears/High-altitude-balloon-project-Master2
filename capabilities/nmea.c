@@ -143,49 +143,49 @@ uint8_t process_gga_packet() {
     gpsInfo.fix.time.second = atoi(temp);
     
     
-    while(packet[i++] != ',');	// next field is latitude
+    SKIP_TO_NEXT_FIELD_IN_PACKET;	// next field is latitude
     strncpy(temp,&packet[i],2);
     gpsInfo.fix.latitude = atof(temp);
     i += 2;		// advance to latitude minutes;
     strncpy(temp,&packet[i],2);
     i_temp = atoi(temp);	// i_temp is the minutes latitude
-    while( packet[i++] != '.' );	// advance to fractional minutes
+    SKIP_TO_NEXT_FIELD_IN_PACKET;	// advance to fractional minutes
     i_temp2 = atoi(&packet[i]);		// fractional minutes
     gpsInfo.fix.latitude += (float)i_temp/60.0f + (float)i_temp2/3600.0f;
     
-    while(packet[i++] != ',');	// next field is N/s indicator
+    SKIP_TO_NEXT_FIELD_IN_PACKET;	// next field is N/s indicator
     if( packet[i] == 'S' ) { gpsInfo.fix.latitude = -gpsInfo.fix.latitude; }
     
-    while(packet[i++] != ',');	// next field if longitude
+    SKIP_TO_NEXT_FIELD_IN_PACKET;	// next field if longitude
     strncpy(temp,&packet[i],3); temp[3] = '\0';
     gpsInfo.fix.longitude = atof(temp);
     i += 3;		// advance to longitude minutes;
     strncpy(temp,&packet[i],2); temp[2] = '\0';
     i_temp = atoi(temp);	// i_temp is the minutes longitude
-    while( packet[i++] != '.' );	// advance to fractional minutes
+    SKIP_TO_NEXT_FIELD_IN_PACKET;	// advance to fractional minutes
     i_temp2 = atoi(&packet[i]);		// fractional minutes
     gpsInfo.fix.longitude += (float)i_temp/60.0f + (float)i_temp2/3600.0f;
     
     // next field is the E/W indicator
-    while(packet[i++] != ',');
+   SKIP_TO_NEXT_FIELD_IN_PACKET;
     if( packet[i] == 'W' ) { gpsInfo.fix.longitude = -gpsInfo.fix.longitude; }
     
     printf("degrees is %0.6f\r",gpsInfo.fix.longitude);
     
     // next field is the fix quality
-    while(packet[i++] != ',');
+    SKIP_TO_NEXT_FIELD_IN_PACKET;
     printf("SAT QUAL = %d\r",atoi(&packet[i]));
     
     // next field is the satellite number
-    while(packet[i++] != ',');
+    SKIP_TO_NEXT_FIELD_IN_PACKET;
     printf("SAT NUM = %d\r",atoi(&packet[i]));
     
     // next field is the h dilution of position
-    while(packet[i++] != ',');
+    SKIP_TO_NEXT_FIELD_IN_PACKET;
     printf("H DIL POS = %0.1f\r",atof(&packet[i]));
     
     // next field is the altitude in meters
-    while(packet[i++] != ',');
+    SKIP_TO_NEXT_FIELD_IN_PACKET;
     gpsInfo.fix.altitude = atof(&packet[i]);
     
     printf("ALT = %0.1fm\r",gpsInfo.fix.altitude);
