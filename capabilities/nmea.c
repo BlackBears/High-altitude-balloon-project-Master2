@@ -12,6 +12,7 @@
 //	for the HAB project.  This set of functions operates as a finite state machine parser.
 //
 //////////////////////////////////////////////////////////////////////////////////////////
+
 #include "nmea.h"
 
 #include <avr/io.h>
@@ -64,6 +65,10 @@ void nmeaAddChar(uint8_t data) {
                 DEBUG_PRINT("Detected NMEA_START\r");
                 idx = 0;
                 packet[idx++] = data;
+                if( idx > BUFFER_LEN ) {
+                	idx = 0;
+                	state = NMEA_IDLE;
+                }
             }
             break;
         case NMEA_START:
