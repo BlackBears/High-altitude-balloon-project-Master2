@@ -1,11 +1,17 @@
-/*
- * nmea.c
- *
- * Created: 5/8/2012 9:37:44 AM
- *  Author: Administrator
- */ 
-
-
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+//	File		: nmea.c
+//	Author		: Alan K. Duncan <duncan.alan@mac.com>
+//	Created		: 5/8/2012 9:37:34 AM
+//	Modified	: 5/13/2012 4:32:00 PM
+//	Version		: 1.0
+//	Target MCU	: ATmega 644A
+//
+//	This file provides NMEA parsing functionality.  At this time, it parses only two NMEA
+//	sentences - $GPGGA and $GPVTG which are the only two pieces of functionality required
+//	for the HAB project.  This set of functions operates as a finite state machine parser.
+//
+//////////////////////////////////////////////////////////////////////////////////////////
 #include "nmea.h"
 
 #include <avr/io.h>
