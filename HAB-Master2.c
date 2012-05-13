@@ -54,6 +54,7 @@ tmp102_t external_temperature;		// 	external temperature sensor
 static long temperature = 0;		//	temperature from BP sensor
 static long pressure = 0;			//	barometric pressure in Pascals (Pa)
 static u08 humidity = 0;			//	external humidity reading
+static uint32_t rtc_set_millis = 0;	//	ms to set the rtc by the GPS
 static uint32_t rtc_millis = 0;		//	ms to rtc read timeout
 static uint32_t sensor_millis = 0;	//	ms to sensor read timeout
 static uint32_t warmer_64Hz_millis = 0;	//	ms until next 64 Hz timeout for warmer pulse
@@ -173,8 +174,8 @@ static inline void update_warmers(uint32_t m) {
 #define FORCE_SERIAL_OUTPUT_TERMINAL 1
 
 int main(void) {
-	wdt_disable();			//	disable
-	wdt_enable(WDTO_4S);	//	then re-enable the watchdog timer with 4 second interrupt
+	//wdt_disable();			//	disable
+	//wdt_enable(WDTO_4S);	//	then re-enable the watchdog timer with 4 second interrupt
 	
 	DDRB |= (1<<PB1); PORTB &= ~(1<<PB1);
 	for(u08 i = 0; i < 10; i++) {
@@ -203,12 +204,16 @@ int main(void) {
 	while(1) {
 		//	complete the tasks that are not contingent on anything else
 		//	such as polling the GPS, checking for cellular calls, etc
-		wdt_reset();				//  kick the watchdog
+		//wdt_reset();				//  kick the watchdog
 		poll_gps();					//	does gps have a character?
 		uint32_t m = millis();		//	get our current ms time
 		//dx_indicator_update(m);		//	update the dx indicators
 		//update_warmers(m);			//	update our warmers (e.g. battery etc.)
-		
+		if( rtc_set_millis >= 300000L ) {
+			rtc_set_millis = 0;
+			if( gpsInfo.fix.time.hour == rtc.hour )
+				memcpy(&rtc,&gpsInfo.fix.time,sizeof(time_t));
+		}	//	set the rtc every 5 minutes to the gps time
 	}
 }
 /*
