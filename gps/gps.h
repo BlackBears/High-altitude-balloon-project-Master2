@@ -1,9 +1,16 @@
-/*
- * gps.h
- *
- * Created: 5/8/2012 9:30:34 AM
- *  Author: Administrator
- */ 
+ /////////////////////////////////////////////////////////////////////////////////////////
+ //	File		: gps.h
+ //	Author		: Alan K Duncan <duncan.alan@mac.com>
+ // Created		: 5/8/2012 9:30:34 AM
+ //	Modified	: 5/13/2012 4:25:00 PM
+ // Version		: 1.0
+ //	Target MCU	: ATmega 644A
+ //
+ //	Provides GPS functionality for the HAB project.  Primarily handles the initialization
+ //	of the serial interface to the GPS on UART0, accumulating incoming serial characters
+ //	from the device; and it provides structures for the parsed GPS data.
+ /////////////////////////////////////////////////////////////////////////////////////////
+ 
 
 
 #ifndef GPS_H_
