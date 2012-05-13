@@ -32,6 +32,7 @@
 
 //	shorthand macro to skip to the next comma-delimited field
 #define SKIP_TO_NEXT_FIELD_IN_PACKET while(packet[i++] != ',');
+#define RESET_ON_BUFFER_OVERFLOW if( idx > BUFFER_LEN ) { idx = 0; state = NMEA_IDLE; }
 
 //	set DEBUG_NMEA to 1 to log parsing events, state changes, etc.
 #define DEBUG_NMEA 1
@@ -65,10 +66,8 @@ void nmeaAddChar(uint8_t data) {
                 DEBUG_PRINT("Detected NMEA_START\r");
                 idx = 0;
                 packet[idx++] = data;
-                if( idx > BUFFER_LEN ) {
-                	idx = 0;
-                	state = NMEA_IDLE;
-                }
+                
+                RESET_ON_BUFFER_OVERFLOW
             }
             break;
         case NMEA_START:
@@ -76,10 +75,7 @@ void nmeaAddChar(uint8_t data) {
             state = NMEA_ACCUMULATE;
             DEBUG_PRINT("NMEA_ACCUMULATE\r");
             packet[idx++] = data;
-            if( idx > BUFFER_LEN) {
-                idx = 0;
-                state = NMEA_IDLE;
-            }
+            RESET_ON_BUFFER_OVERFLOW
             break;
         case NMEA_ACCUMULATE:
             if( data == '\r' ) {
@@ -101,11 +97,7 @@ void nmeaAddChar(uint8_t data) {
             }
             else {
                 packet[idx++] = data;
-                if( idx > BUFFER_LEN) {
-                    idx = 0;
-                    state = NMEA_IDLE;
-                    DEBUG_PRINT("NMEA_IDLE (A)\r");
-                }
+                RESET_ON_BUFFER_OVERFLOW
                 break;
             }
             break;
