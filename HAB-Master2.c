@@ -40,8 +40,6 @@
 #include "sensors/hih4030.h"
 #include "common/types.h"
 #include "common/pindefs.h"
-#include "common/states.h"
-//#include "capabilities/vfd.h"
 
 /************************************************************************/
 /* GLOBAL VARIABLES                                                     */
