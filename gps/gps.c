@@ -19,7 +19,7 @@
 //	peripheral to which the GPS is attached.
 //
 void gps_init() {
-	nmea_init();									//	initialize our NMEA processor	
+	nmea_init();				//	initialize our NMEA processor	
 	UBRR0H = UBRRH_VALUE;		//	set the baud rate 4800 standard for GPS
 	UBRR0L = UBRRL_VALUE;
 	UCSR0B |= (1<<RXEN0);		//	just want to receive				
