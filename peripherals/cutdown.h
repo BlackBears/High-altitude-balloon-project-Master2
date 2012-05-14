@@ -19,8 +19,8 @@
 
 #include "../common/global.h"
 
-#define CUTDOWN_CONTROLLER_REQUEST_LATENCY      60  //  must confirm in 60s
-#define CUTDOWN_CONTROLLER_BURN_DURATION        20  //  burn for 20s
+#define CUTDOWN_CONTROLLER_REQUEST_LATENCY      60000  //  must confirm in 60s
+#define CUTDOWN_CONTROLLER_BURN_DURATION        20000  //  burn for 20s
 
 enum {
     CUTDOWN_IDLE,
@@ -31,16 +31,12 @@ enum {
 };
 typedef u08 cutdown_state_t;
 
-typedef struct {
-    cutdown_state_t state;
-    u08 ticks
-} cutdown_controller_t;
-
-cutdown_controller_t cutdown;
+uint32_t cutdown_timeout;			//	timeout for current state in milliseconds
+cutdown_state_t cutdown_state;		//	our current state
 
 void cutdown_controller_init(void);
-void cutdown_controller_request(void);
-void cutdown_controller_confirm(void);
-void cutdown_controller_update(void);
+void cutdown_controller_request(uint32_t m);
+void cutdown_controller_confirm(uint32_t m);
+void cutdown_controller_update(uint32_t m);
 
 #endif

@@ -20,43 +20,38 @@
 void cutdown_controller_init(void) {
     DDR(CUTDOWN_CONTROL_PORT) |= (1<<CUTDOWN_CONTROL_PIN);
     CUTDOWN_CONTROL_PORT &= ~(1<<CUTDOWN_CONTROL_PIN);
-    cutdown.state = CUTDOWN_IDLE;
-    cutdown.ticks = 0;
+    cutdown_state = CUTDOWN_IDLE;
+    cutdown_timeout = 0;
 }
 
-void cutdown_controller_update(void) {
-    switch( cutdown.state ) {
-        case CUTDOWN_REQUESTED: {
-            if( cutdown.ticks > CUTDOWN_CONTROLLER_REQUEST_LATENCY ) {
-                cutdown.ticks = 0;
-                cutdown.state = CUTDOWN_IDLE;
-            }
-            else { cutdown.ticks = cutdown.ticks + 1; }
-            break;
-        }
-        case CUTDOWN_BURN: {
-            if( cutdown.ticks > CUTDOWN_CONTROLLER_BURN_DURATION ) {
-                CUTDOWN_CONTROL_PORT &= ~(1<<CUTDOWN_CONTROL_PIN);
-                cutdown.state = CUTDOWN_COMPLETED;
-                cutdown.ticks = 0;
-            }
-            else { cutdown.ticks = cutdown.ticks + 1; }
-            break;
-        }
-        default:
-            break;
-    }
+void cutdown_controller_update(uint32_t m) {
+	if( m > cutdown_timeout ) {
+		switch( cutdown_state ) {
+			case CUTDOWN_REQUESTED: {
+				cutdown_state = CUTDOWN_IDLE;	//	never confirmed
+				cutdown_timeout = m;
+				break;
+			}
+			case CUTDOWN_BURN: {
+				cutdown_state = CUTDOWN_COMPLETED;
+				CUTDOWN_CONTROL_PORT &= ~(1<<CUTDOWN_CONTROL_PIN);
+				cutdown_timeout = m;
+				break;
+			}	
+			
+		}
+	}
 }
 
-void cutdown_controller_request(void) {
-    cutdown.state = CUTDOWN_REQUESTED;
-    cutdown.ticks = 0;
+void cutdown_controller_request(uint32_t m) {
+    cutdown_state = CUTDOWN_REQUESTED;
+    cutdown_timeout = m + CUTDOWN_CONTROLLER_REQUEST_LATENCY;
 }
 
-void cutdown_controller_confirm(void) {
-    cutdown.state = CUTDOWN_CONFIRMED;
+void cutdown_controller_confirm(uint32_t m) {
+    cutdown_state = CUTDOWN_CONFIRMED;
     CUTDOWN_CONTROL_PORT |= (1<<CUTDOWN_CONTROL_PIN);
-    cutdown.state = CUTDOWN_BURN;
-    cutdown.ticks = 0;
+    cutdown_state = CUTDOWN_BURN;
+    cutdown_timeout = m + CUTDOWN_CONTROLLER_BURN_DURATION ;
 }
 
