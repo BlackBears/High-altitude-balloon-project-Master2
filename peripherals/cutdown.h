@@ -1,4 +1,18 @@
-
+//////////////////////////////////////////////////////////////////////////////////////////
+//	
+//	File		: 'cutdown.h'
+//	Author		: Alan K. Duncan <duncan.alan@mac.com>
+//	Created		: 2012-05-01
+//	Revised		: 2012-05-09
+//	Version		: 1.0
+//	Target MCU	: ATmega644A
+//	
+//	This file handles the payload cutdown.  If the payload must be separated from the
+//  balloon, the functions in this file handles the separation.  The cutdown command must
+//	be confirmed before the actual burn can take place.
+//
+//
+//////////////////////////////////////////////////////////////////////////////////////////
 
 #ifndef __CUTDOWN_H
 #define __CUTDOWN_H
