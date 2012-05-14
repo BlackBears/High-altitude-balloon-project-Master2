@@ -23,11 +23,11 @@
 #define CUTDOWN_CONTROLLER_BURN_DURATION        20  //  burn for 20s
 
 enum {
-    k_cutdown_state_idle,
-    k_cutdown_state_requested,
-    k_cutdown_state_confirmed,
-    k_cutdown_state_burn,
-    k_cutdown_state_burn_completed
+    CUTDOWN_IDLE,
+    CUTDOWN_REQUESTED,
+    CUTDOWN_CONFIRMED,
+    CUTDOWN_BURN,
+    CUTDOWN_COMPLETED
 };
 typedef u08 cutdown_state_t;
 

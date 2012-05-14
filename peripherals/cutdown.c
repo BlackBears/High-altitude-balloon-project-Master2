@@ -20,24 +20,24 @@
 void cutdown_controller_init(void) {
     DDR(CUTDOWN_CONTROL_PORT) |= (1<<CUTDOWN_CONTROL_PIN);
     CUTDOWN_CONTROL_PORT &= ~(1<<CUTDOWN_CONTROL_PIN);
-    cutdown.state = k_cutdown_state_idle;
+    cutdown.state = CUTDOWN_IDLE;
     cutdown.ticks = 0;
 }
 
 void cutdown_controller_update(void) {
     switch( cutdown.state ) {
-        case k_cutdown_state_requested: {
+        case CUTDOWN_REQUESTED: {
             if( cutdown.ticks > CUTDOWN_CONTROLLER_REQUEST_LATENCY ) {
                 cutdown.ticks = 0;
-                cutdown.state = k_cutdown_state_idle;
+                cutdown.state = CUTDOWN_IDLE;
             }
             else { cutdown.ticks = cutdown.ticks + 1; }
             break;
         }
-        case k_cutdown_state_burn: {
+        case CUTDOWN_BURN: {
             if( cutdown.ticks > CUTDOWN_CONTROLLER_BURN_DURATION ) {
                 CUTDOWN_CONTROL_PORT &= ~(1<<CUTDOWN_CONTROL_PIN);
-                cutdown.state = k_cutdown_state_burn_completed;
+                cutdown.state = CUTDOWN_COMPLETED;
                 cutdown.ticks = 0;
             }
             else { cutdown.ticks = cutdown.ticks + 1; }
@@ -49,14 +49,14 @@ void cutdown_controller_update(void) {
 }
 
 void cutdown_controller_request(void) {
-    cutdown.state = k_cutdown_state_requested;
+    cutdown.state = CUTDOWN_REQUESTED;
     cutdown.ticks = 0;
 }
 
 void cutdown_controller_confirm(void) {
-    cutdown.state = k_cutdown_state_confirmed;
+    cutdown.state = CUTDOWN_CONFIRMED;
     CUTDOWN_CONTROL_PORT |= (1<<CUTDOWN_CONTROL_PIN);
-    cutdown.state = k_cutdown_state_burn;
+    cutdown.state = CUTDOWN_BURN;
     cutdown.ticks = 0;
 }
 
