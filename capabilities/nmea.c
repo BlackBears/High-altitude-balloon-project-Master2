@@ -28,7 +28,7 @@
 #include "uart2.h"
 
 #define BUFFER_LEN 80
-#define NMEA_DEBUG 1
+#define NMEA_DEBUG 0
 
 //	shorthand macro to skip to the next comma-delimited field
 #define SKIP_TO_NEXT_FIELD_IN_PACKET while(packet[i++] != ',');
@@ -110,7 +110,7 @@ uint8_t process_vtg_packet() {
     if( packet[i] == ',' && packet[i+1] == ',') { return 0;}
     
     gpsInfo.h_track.course = atof(&packet[i]);
-    printf("\tDEGREES: %0.1f\r",gpsInfo.h_track.course);
+    //printf("\tDEGREES: %0.1f\r",gpsInfo.h_track.course);
     
     
     //	next field is T for track
@@ -123,7 +123,7 @@ uint8_t process_vtg_packet() {
     SKIP_TO_NEXT_FIELD_IN_PACKET
     gpsInfo.h_track.velocity = atof(&packet[i]);
     
-    printf("\tVELOCITY = %0.1f\r",gpsInfo.h_track.velocity);
+    //printf("\tVELOCITY = %0.1f\r",gpsInfo.h_track.velocity);
     
     return 1;
 }
@@ -177,21 +177,21 @@ uint8_t process_gga_packet() {
     
     // next field is the fix quality
     SKIP_TO_NEXT_FIELD_IN_PACKET;
-    printf("SAT QUAL = %d\r",atoi(&packet[i]));
+    //printf("SAT QUAL = %d\r",atoi(&packet[i]));
     
     // next field is the satellite number
     SKIP_TO_NEXT_FIELD_IN_PACKET;
-    printf("SAT NUM = %d\r",atoi(&packet[i]));
+    //printf("SAT NUM = %d\r",atoi(&packet[i]));
     
     // next field is the h dilution of position
     SKIP_TO_NEXT_FIELD_IN_PACKET;
-    printf("H DIL POS = %0.1f\r",atof(&packet[i]));
+    //printf("H DIL POS = %0.1f\r",atof(&packet[i]));
     
     // next field is the altitude in meters
     SKIP_TO_NEXT_FIELD_IN_PACKET;
     gpsInfo.fix.altitude = atof(&packet[i]);
     
-    printf("ALT = %0.1fm\r",gpsInfo.fix.altitude);
+    //printf("ALT = %0.1fm\r",gpsInfo.fix.altitude);
     return 1;
 
 }
