@@ -38,7 +38,7 @@ void nmeaInit(void);
 
 //	
 //	add an incoming character to be analyzed
-/
+//
 void nmeaAddChar(uint8_t data);
 
 // constants/macros/typdefs
