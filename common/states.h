@@ -4,6 +4,7 @@
 
 #include "global.h"
 #include "types.h"
+#include "../gps/gps.h"
 #include "../peripherals/mux.h"
 
 enum {
