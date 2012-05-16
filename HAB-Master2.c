@@ -33,6 +33,7 @@
 #include "peripherals/mux.h"
 #include "peripherals/dx.h"
 #include "peripherals/terminal.h"
+#incluce "peripherals/voltage.h"
 #include "gps/gps.h"
 #include "capabilities/nmea.h"
 #include "sensors/bmp085.h"
@@ -44,21 +45,26 @@
 /************************************************************************/
 /* GLOBAL VARIABLES                                                     */
 /************************************************************************/
-flight_status_t flight_status;		//	our main flight status structure
-time_t rtc;							// 	real-time clock
-warmer_t battery_warmer;			//	battery warmer structure
-tmp102_t internal_temperature;		//	internal temperature sensor
-tmp102_t external_temperature;		// 	external temperature sensor
-static long temperature = 0;		//	temperature from BP sensor
-static long pressure = 0;			//	barometric pressure in Pascals (Pa)
-static u08 humidity = 0;			//	external humidity reading
-static uint32_t rtc_set_millis = 0;	//	ms to set the rtc by the GPS
-static uint32_t rtc_millis = 0;		//	ms to rtc read timeout
-static uint32_t sensor_millis = 0;	//	ms to sensor read timeout
+flight_status_t flight_status;			//	our main flight status structure
+time_t rtc;								// 	real-time clock
+warmer_t battery_warmer;				//	battery warmer structure
+tmp102_t internal_temperature;			//	internal temperature sensor
+tmp102_t external_temperature;			// 	external temperature sensor
+static long temperature = 0;			//	temperature from BP sensor
+static long pressure = 0;				//	barometric pressure in Pascals (Pa)
+static u08 humidity = 0;				//	external humidity reading
+static uint32_t rtc_set_millis = 0;		//	ms to set the rtc by the GPS
+static uint32_t rtc_millis = 0;			//	ms to rtc read timeout
+static uint32_t sensor_millis = 0;		//	ms to sensor read timeout
 static uint32_t warmer_64Hz_millis = 0;	//	ms until next 64 Hz timeout for warmer pulse
-static uint8_t warmer_8Hz_div = 0;	//	8 Hz counter for warmer power update
+static uint32_t position_millis = 0;	//	ms until next position log
+static uint8_t warmer_8Hz_div = 0;		//	8 Hz counter for warmer power update
 
-#define clockCyclesPerMicrosecond() ( F_CPU / 1600000L )
+#define POSITION_REPORT_INTERVAL 5000UL	//	interval for recording position
+#define RTC_SET_INTERVAL 30000UL		//	interval for resetting RTC by GPS
+#define SENSOR_REPORT_INTERVAL 5000UL	//	interval for reporting sensor readings
+
+#define clockCyclesPerMicrosecond() ( F_CPU / 7372800UL )
 #define clockCyclesToMicroseconds(a) ( (a) / clockCyclesPerMicrosecond() )
 #define microsecondsToClockCycles(a) ( (a) * clockCyclesPerMicrosecond() )
 
@@ -197,6 +203,23 @@ static inline void update_warmers(uint32_t m) {
 #endif
 }
 
+//
+//	report position/velocity/altitude to UART1 (terminal or logger)
+//
+static inline void report_position(void) {
+	char buffer[60];
+	sprintf(buffer,"$POS%02d%02d%02d%0.5f,%0.5f,%0.1f,%0.1f,%0.1f\r",
+		gpsInfo.fix.time.hour,
+		gpsInfo.fix.time.minute,
+		gpsInfo.fix.time.second,
+		gpsInfo.fix.latitude,
+		gpsInfo.fix.longitude,
+		gpsInfo.fix.altitude,
+		gpsInfo.h_track.course,
+		gpsInfo.h_track.velocity);
+	uartSendString(1,buffer);
+}
+
 
 #define USING_WARMERS 1
 #define FORCE_SERIAL_OUTPUT_TERMINAL 1
@@ -219,6 +242,9 @@ int main(void) {
 	initialize_uart1();	//	init the interface and clear terminal
 
 	_init_timer1();
+	_delay_ms(10);
+	sensor_millis = m + 2500;		//	stagger our position and sensor reports by 2.5 s
+	
 	hih4030_init();					//	initialize the humidity sensor
 	dx_indicator_init();			//	init dx indicators
 	
@@ -308,17 +334,21 @@ int main(void) {
 		static u08 gpsData;
 		if( uartReceiveByte(0,&gpsData) ) { gps_add_char(gpsData); }
 		
-		//poll_gps();					//	does gps have a character?
-		
 		dx_indicator_update(m);		//	update the dx indicators
 		update_warmers(m);			//	update our warmers (e.g. battery etc.)
 		
-		//	every 5 minutes try to set the RTC by the GPS time
-		if( rtc_set_millis >= 300000L ) {
-			rtc_set_millis = 0;
+		//	periodically report our position
+		if( m >= position_millis ) {
+			position_millis = m + POSITION_REPORT_INTERVAL;	//	schedule next interval
+			report_position();
+		}
+		
+		//	reset RTC by the GPS time at certain interval (nominally 5 minutes)
+		if( m > rtc_set_millis ) {
+			rtc_set_millis = m + RTC_SET_INTERVAL;
 			if( gpsInfo.fix.time.hour == rtc.hour )
 				memcpy(&rtc,&gpsInfo.fix.time,sizeof(time_t));
-		}	//	set the rtc every 5 minutes to the gps time
+		}	//	periodic reset RTC by GPS time
 	}
 }
 /*
@@ -574,6 +604,8 @@ void report_enviro(void) {
 	sprintf(buffer,"HUM%03d",humidity); uartSendString(1,buffer);
 	uartSendByte(1,"\r");
 }
+
+
 
 void set_serial_channel(mux_channel_t chan) {
 	mux_select_channel(chan);
