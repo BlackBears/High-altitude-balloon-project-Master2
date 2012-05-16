@@ -4,8 +4,8 @@
 
 #define CELLULAR_BASE_ADDRESS 0xBB
 
-#define CELLUAR_HOUR_REG 0x00
-#define CELLUAR_MINUTE_REG	0x01
+#define CELLULAR_HOUR_REG 0x00
+#define CELLULAR_MINUTE_REG	0x01
 #define CELLULAR_SECOND_REG	0x02
 #define CELLULAR_ALT_REG	0x03
 #define CELLULAR_TEMP_REG	0x07
@@ -31,14 +31,14 @@ static int8_t cellular_read_register(u08 reg)
 	return device_data[0];
 }
 
-void cellular_set_time(rtc t) {
+void cellular_set_time(time_t t) {
 	cellular_write_register(CELLULAR_HOUR_REG, t.hour);
 	cellular_write_register(CELLULAR_MINUTE_REG, t.minute);
 	cellular_write_register(CELLULAR_SECOND_REG, t.second);
 }
 
 void cellular_set_altitude(int32_t a) {
-	cellular_write_register(CELLULAR_ALT_REG, a>>24)
+	cellular_write_register(CELLULAR_ALT_REG, a>>24);
 	cellular_write_register(CELLULAR_ALT_REG+1, (uint8_t)(a>>16));
 	cellular_write_register(CELLULAR_ALT_REG+2, (uint8_t)(a>>8));
 	cellular_write_register(CELLULAR_ALT_REG+3, (uint8_t)a & ~0xFFFFFF00);
