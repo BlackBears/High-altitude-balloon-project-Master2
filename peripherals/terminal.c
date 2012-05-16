@@ -15,6 +15,7 @@
 #include "../common/states.h"
 #include "../common/types.h"
 #include "../peripherals/mux.h"
+#include "../peripherals/voltage.h"
 #include <string.h>
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
@@ -135,29 +136,14 @@ void terminal_process_char(char data) {
 			CLEAR_RX_BUFFER;
         }	//	print humidity
         else if( strcmp_P(term_buffer,PSTR("AT+VOLT?")) == 0 ) {
-			//
-			// see: http://www.ikalogic.com/avr-monitor-power-supply-voltage-for-free/
-			//
-			a2dInit();
-			a2dSetReference(ADC_REFERENCE_AVCC);	//	AVCC as analog reference
-			a2dSetChannel(ADC_CH_122V);				//	bandgap voltage;
-			uint16_t accumulator = 0;
-			for(uint8_t i = 0; i < 127; i++) {
-				accumulator += a2dConvert10bit(ADC_CH_122V);
-			}
-			uint16_t adc_data = (accumulator>>7);
-			
-			
-			float vcc = 1100.0f * (1023.0f/(float)adc_data);
+			float vcc = voltage_5V(VOLTAGE_OS_5);
 			sprintf(out_buffer,"\r~ %0.0f mV\r",vcc);
 			uartSendString(1,out_buffer);
 			_terminal_print_prompt();
 			CLEAR_RX_BUFFER;
         }	// print estimated VCC
 		else if( strstr_P(term_buffer,PSTR("AT+V33?"))) {
-			a2dInit();
-			uint16_t adc_data = a2dConvert10bit(6);
-			float vcc33 = 5000.0f * (float)adc_data/1023.0f;
+			float vcc33 = voltage_3V(VOLTAGE_OS_5);
 			sprintf(out_buffer,"\r~ %0.2f mV\r",vcc33);
 			uartSendString(1,out_buffer);
 			_terminal_print_prompt();
