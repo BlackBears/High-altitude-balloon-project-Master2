@@ -113,6 +113,34 @@ unsigned long millis();
 //
 ////////////////////////////////////////////////////////////////////////
 
+static void _init_timer1(void) {
+	TIMSK1 |= (1<<TOIE1);				//	enable TIMER0 OVF interrupt
+	sei();								//	enable global interrupts
+	
+	TCCR1B |= (1<<CS10);				//	prescaler @ /1	
+	TCNT1 = 58162;
+}
+
+ISR(TIMER1_OVF_vect)
+{
+	TCNT1 = 58162;
+	// copy these to local variables so they can be stored in registers
+	// (volatile variables must be read from memory on every access)
+	unsigned long m = timer0_millis;
+	unsigned char f = timer0_fract;
+	
+	m += MILLIS_INC;
+	f += FRACT_INC;
+	if (f >= FRACT_MAX) {
+		f -= FRACT_MAX;
+		m += 1;
+	}
+
+	timer0_fract = f;
+	timer0_millis = m;
+	timer0_overflow_count++;
+}
+
 static inline void initialize_i2c_peripherals(void) {
 	i2cInit();          //  initialize the I2C bus
 	
@@ -133,6 +161,7 @@ static inline void initialize_i2c_peripherals(void) {
 static inline void initialize_uart1(void) {
 	//	deal with UART1 initialization
  	mux_init();				//	init the serial multiplexer on UART1
+	 mux_select_channel(MUX_TERMINAL);
 	uart1Init();			//	set up our multiplexed UART1 port
 	uartSetBaudRate(1,9600);
 	sei();
@@ -141,8 +170,9 @@ static inline void initialize_uart1(void) {
 }
 
 static inline void poll_gps(void) {
-	//if( UCSR0A & (1<<RXC0) )  { gps_add_char(UDR0); }
-	if( UCSR0A & (1<<RXC0) )  { uartSendByte(1,UDR0); }
+	if( UCSR0A & (1<<RXC0) )  { gps_add_char(UDR0); }
+	//if( UCSR0A & (1<<RXC0) )  { uartSendByte(1,UDR0); }
+	//if( UCSR0A & (1<<RXC0) ) { u08 data = UDR0; if( data == 0x0D ) { uartSendByte(1,'*'); } }
 }
 
 //	
@@ -172,11 +202,11 @@ static inline void update_warmers(uint32_t m) {
 #define FORCE_SERIAL_OUTPUT_TERMINAL 1
 
 int main(void) {
-	//wdt_disable();			//	disable
-	//wdt_enable(WDTO_4S);	//	then re-enable the watchdog timer with 4 second interrupt
+	wdt_disable();			//	disable
+	wdt_enable(WDTO_4S);	//	then re-enable the watchdog timer with 4 second interrupt
 	
 	DDRB |= (1<<PB1); PORTB &= ~(1<<PB1);
-	for(u08 i = 0; i < 10; i++) {
+	for(u08 i = 0; i < 4; i++) {
 		PORTB ^= (1<<PB1);	
 		_delay_ms(100);
 	}		
@@ -187,26 +217,103 @@ int main(void) {
 	
 	gps_init();			//	init the UART0, gps info and NMEA processor
 	initialize_uart1();	//	init the interface and clear terminal
-	
-	//	initialize our TIMER0 which counts milliseconds
-	DO_AND_WAIT(_init_timer0(),10);
-	
-	//hih4030_init();					//	initialize the humidity sensor
+
+	_init_timer1();
+	hih4030_init();					//	initialize the humidity sensor
 	dx_indicator_init();			//	init dx indicators
+	
+	initialize_i2c_peripherals();
 	
 	flight_status.serial_channel = MUX_TERMINAL;
 	flight_status.terminal.state = TERMINAL_WAITING;
-	flight_status.terminal.timeout = millis() + 5000;		//	five seconds to respond
+	flight_status.terminal.timeout = millis() + 10000;		//	five seconds to respond
 	flight_status.event.gps_altitude_timeout = millis() + 10000;
 	
 	while(1) {
+		uint32_t m = millis();		//	get our current ms time
+		//	if we are waiting for the terminal input timer to expire and we reach the timeout
+		//	then say goodbye to the terminal and redirect the serial output to the OpenLog module
+		//
+		if( flight_status.terminal.state == TERMINAL_WAITING ) {
+			if( m >= flight_status.terminal.timeout ) {
+				//	terminal did not register within timeout, so we will begin regular procedures
+				flight_status.terminal.state = TERMINAL_OFF;
+				uartSendString_P(1,"\rTerminal timed out\r");
+				uartSendString_P(1,"Bye\r");
+				//  redirect logging to the OpenLog
+				#if FORCE_SERIAL_OUTPUT_TERMINAL == 0
+				mux_select_channel(MUX_OPEN_LOG);
+				#endif
+			}	//	terminal wait timed out
+			else {
+				if( !flight_status.should_ignore_serial_input  ) {
+					//	we're waiting for terminal input, so let's get a character
+					u08 terminal_data;
+					if( uartReceiveByte(1,&terminal_data) ) {
+						if( terminal_data != 0x0D )
+							uartSendByte(1,(char)terminal_data);
+						terminal_process_char( (char)terminal_data );
+						flight_status.terminal.state = TERMINAL_SELECTED;
+					}	//	valid data on terminal
+				}	// mux terminal is active channel
+			}	//	terminal wait did NOT timeout
+		}	//	terminal waiting
+		else if( flight_status.terminal.state == TERMINAL_OFF ) {
+			if( m - rtc_millis >= 1000) {
+				read_rtc();
+				rtc_millis = m;	
+			}	// 1000 ms passed since read RTC	
+			if( m - sensor_millis >= 5000) {
+				read_sensors();
+				report_enviro();
+				sensor_millis = m;
+			}	//	5000 ms passed since read sensors
+			if( m >= flight_status.event.gps_altitude_timeout ) {
+				//	TODO: record the GPS altitude in the 'altimeter'
+			}
+			wdt_reset();
+			
+			#if USING_WARMERS == 1
+			//	update our warmer output at 64 Hz (~15 ms)
+			if( m - warmer_64Hz_millis > 16) {
+				warmer_update_64Hz();       //  update the controller output at 64Hz
+				//  execute control update every 8 steps (64 Hz/8 = 8 Hz)
+				if( ++warmer_8Hz_div == 8) {
+					warmer_update_8Hz();
+					warmer_8Hz_div = 0;
+				}	//	8 Hz update
+				warmer_64Hz_millis = m;
+			}	//	64 Hz update
+			#endif
+			wdt_reset();
+			dx_indicator_update(m);
+		} // terminal is not waiting
+		else {
+				//	NOTE: this code block is everything else that should happen in the main loop
+				//	but is not contingent on anything else; so, tasks that should always run
+				//	as frequently as possible, e.g. polling the GPS, looking for cell calls, etc.
+				//
+			if( !flight_status.should_ignore_serial_input ) {
+				u08 terminal_data;
+				if( uartReceiveByte(1,&terminal_data) ) {
+					terminal_process_char( terminal_data );
+					if( terminal_data != 0x0D )
+						uartSendByte(1,terminal_data);
+				} //	valid data on terminal	
+			}	//	should not ignore serial data
+		}	//	terminal mode
 		//	complete the tasks that are not contingent on anything else
 		//	such as polling the GPS, checking for cellular calls, etc
-		//wdt_reset();				//  kick the watchdog
-		poll_gps();					//	does gps have a character?
-		uint32_t m = millis();		//	get our current ms time
-		//dx_indicator_update(m);		//	update the dx indicators
-		//update_warmers(m);			//	update our warmers (e.g. battery etc.)
+		wdt_reset();				//  kick the watchdog
+		static u08 gpsData;
+		if( uartReceiveByte(0,&gpsData) ) { gps_add_char(gpsData); }
+		
+		//poll_gps();					//	does gps have a character?
+		
+		dx_indicator_update(m);		//	update the dx indicators
+		update_warmers(m);			//	update our warmers (e.g. battery etc.)
+		
+		//	every 5 minutes try to set the RTC by the GPS time
 		if( rtc_set_millis >= 300000L ) {
 			rtc_set_millis = 0;
 			if( gpsInfo.fix.time.hour == rtc.hour )
@@ -217,8 +324,6 @@ int main(void) {
 /*
 int main(void)
 {
-	UCSR0B &= ~(1<<RXCIE0);	//	don't interrupt for USART0 RX (yet)
-	PCMSK3 &= ~(1<<PCINT24);	//	disable pin change interrupt PCINT24 which shared RXD0
 	DDRA &= ~0xFF;		//	PORTA (ADC is input for all channels)
 	DDRB |= (1<<PB1); PORTB &= ~(1<<PB1);
 	open_log_init();	
@@ -430,47 +535,19 @@ void rtc_set_time(time_t *time) {
 	ds1307_set_seconds(time->second);
 }
 
-void _init_timer0(void) {
-	TIMSK0 |= (1<<OCIE0A);				//	enable TIMER0 COMP interrupt
-	sei();								//	enable global interrupts
-	
-	TCCR0B |= (1<<CS01) | (1<<CS00);	//	prescaler @ /64
-	TCCR0A |= (1<<WGM01);				//	CTC mode
-	OCR0A = 0xFA;						//	this val is hand-tuned with 'scope
-}
-
-ISR(TIMER0_COMPA_vect)
-{
-	// copy these to local variables so they can be stored in registers
-	// (volatile variables must be read from memory on every access)
-	unsigned long m = timer0_millis;
-	unsigned char f = timer0_fract;
-	
-	m += MILLIS_INC;
-	f += FRACT_INC;
-	if (f >= FRACT_MAX) {
-		f -= FRACT_MAX;
-		m += 1;
-	}
-
-	timer0_fract = f;
-	timer0_millis = m;
-	timer0_overflow_count++;
-}
-
 unsigned long millis()
 {
-   unsigned long m;
-   //uint8_t oldSREG = SREG;
+	unsigned long m;
+	uint8_t oldSREG = SREG;
 
-   // disable interrupts while we read timer0_millis or we might get an
-   // inconsistent value (e.g. in the middle of a write to timer0_millis)
-   //cli();
-   m = timer0_millis;
-   //SREG = oldSREG;
-  // sei();
+	// disable interrupts while we read timer0_millis or we might get an
+	// inconsistent value (e.g. in the middle of a write to timer0_millis)
+	cli();
+	m = timer0_millis;
+	SREG = oldSREG;
+	sei();
    
-   return m;
+	return m;
 }
 
 /************************************************************************/
