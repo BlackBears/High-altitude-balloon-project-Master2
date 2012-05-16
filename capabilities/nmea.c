@@ -197,10 +197,11 @@ uint8_t process_gga_packet() {
     SKIP_TO_NEXT_FIELD_IN_PACKET;
     gpsInfo.fix.altitude = atof(&packet[i]);
     
+#if DEBUG_PRINT
 	char outbuf[20];
 	sprintf(outbuf,"lat%0.6f\r",gpsInfo.fix.latitude);
 	uartSendString(1,outbuf);
-    //printf("ALT = %0.1fm\r",gpsInfo.fix.altitude);
+#endif
     return 1;
 
 }
