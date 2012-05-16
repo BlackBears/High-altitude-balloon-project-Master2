@@ -27,7 +27,7 @@
 #include "../gps/gps.h"
 #include "uart2.h"
 
-#define BUFFER_LEN 80
+#define BUFFER_LEN 0x80
 #define NMEA_DEBUG 0
 
 //	shorthand macro to skip to the next comma-delimited field
@@ -35,9 +35,9 @@
 #define RESET_ON_BUFFER_OVERFLOW if( idx > BUFFER_LEN ) { idx = 0; state = NMEA_IDLE; }
 
 //	set DEBUG_NMEA to 1 to log parsing events, state changes, etc.
-#define DEBUG_NMEA 1
+#define DEBUG_NMEA 0
 #if DEBUG_NMEA == 1
-#define DEBUG_PRINT(a) printf(a)
+#define DEBUG_PRINT(a) uartSendString(1,a);
 #else
 #define DEBUG_PRINT(a) //
 #endif
@@ -80,14 +80,19 @@ void nmeaAddChar(uint8_t data) {
         case NMEA_ACCUMULATE:
             if( data == '\r' ) {
                 state = NMEA_COMPLETE;
+				//uartSendString(1,packet);
+				//uart1SendByte(0x0D);
 #if DEBUG_NMEA
-                printf("NMEA_COMPLETE: %d\r",idx);
+                uartSendString(1,"NMEA_COMPLETE:\r");
+				
 #endif
                 if( strstr(packet, "VTG") ) {
+					//uartSendString(1,"VTG\r");
                     DEBUG_PRINT("VTG PACKET FOUND\r");
                     process_vtg_packet();
                 }
                 else if( strstr(packet, "GGA") ) {
+					//uartSendString(1,"GGA\r");
                     DEBUG_PRINT("GGA PACKET FOUND\r");
                     process_gga_packet();
                 }
@@ -98,7 +103,6 @@ void nmeaAddChar(uint8_t data) {
             else {
                 packet[idx++] = data;
                 RESET_ON_BUFFER_OVERFLOW
-                break;
             }
             break;
     }
@@ -124,7 +128,9 @@ uint8_t process_vtg_packet() {
     gpsInfo.h_track.velocity = atof(&packet[i]);
     
     //printf("\tVELOCITY = %0.1f\r",gpsInfo.h_track.velocity);
-    
+    //char outbuf[20];
+	//sprintf(outbuf,"d%0.1f|v%0.1f\r",gpsInfo.h_track.course,gpsInfo.h_track.velocity);
+	//uartSendString(1,outbuf);
     return 1;
 }
 
@@ -191,6 +197,9 @@ uint8_t process_gga_packet() {
     SKIP_TO_NEXT_FIELD_IN_PACKET;
     gpsInfo.fix.altitude = atof(&packet[i]);
     
+	char outbuf[20];
+	sprintf(outbuf,"lat%0.6f\r",gpsInfo.fix.latitude);
+	uartSendString(1,outbuf);
     //printf("ALT = %0.1fm\r",gpsInfo.fix.altitude);
     return 1;
 
