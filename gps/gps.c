@@ -14,6 +14,7 @@
 #include "../capabilities/uart2.h"
 #include "gps.h"
 #include "../capabilities/nmea.h"
+#include "../capabilities/uart2.h"
 #include <stdlib.h>
 
 #define BAUD 4800
@@ -24,10 +25,15 @@
 //	peripheral to which the GPS is attached.
 //
 void gps_init() {
-	nmea_init();				//	initialize our NMEA processor	
+	nmeaInit();				//	initialize our NMEA processor	
+	uart0Init();
+	uartSetBaudRate(0,4800);
+	/*
 	UBRR0H = UBRRH_VALUE;		//	set the baud rate 4800 standard for GPS
 	UBRR0L = UBRRL_VALUE;
-	UCSR0B |= (1<<RXEN0);		//	just want to receive				
+	UCSR0B |= (1<<RXEN0);		//	just want to receive	
+	*/
+				
 }
 
 //
