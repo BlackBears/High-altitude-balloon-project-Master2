@@ -41,8 +41,6 @@ extern void open_log_ls(char *buffer, size_t size);
 extern void set_serial_channel(mux_channel_t chan);
 extern void set_ignore_serial_data(BOOL state);
 
-uint16_t terminal_bandgap_voltage(void);
-
 //  
 //  prints a standard welcome message to the terminal
 //
@@ -88,18 +86,6 @@ static void _terminal_print_status(BOOL status) {
         uartSendString_P(1,"\rON\r");
     else
         uartSendString_P(1,"\rOFF\r");
-}
-
-//	
-//	reads the bandgap voltage on the AVR to estimate its VCC
-//	uses oversampling to reduce noise.
-//
-static uint16_t terminal_avg_bandgap_voltage(void) {
-	uint16_t accumulator = 0;
-	for(uint8_t i = 0; i < 63; i++) {
-		accumulator += terminal_bandgap_voltage();
-	}
-	return (accumulator>>6);
 }
 
 //	
@@ -152,18 +138,18 @@ void terminal_process_char(char data) {
 			//
 			// see: http://www.ikalogic.com/avr-monitor-power-supply-voltage-for-free/
 			//
-			a2dOff();				// we'll use our own code for the bandgap voltage
-			ADMUX = (1<<REFS0);		// Use Vcc as the analog reference;
-			ADCSRA |= (1<<ADEN);	// turn on the ADC circuitry
-			ADCSRA |= (1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0); // prescaler /128
-			ADMUX |= (1<<MUX4) | (1<<MUX3) | (1<<MUX2) | (1<<MUX1);
-			ADMUX &= ~(1<<MUX0);
-			
-			uint16_t adc_data = terminal_avg_bandgap_voltage();
+			a2dInit();
+			a2dSetReference(ADC_REFERENCE_AVCC);	//	AVCC as analog reference
+			a2dSetChannel(ADC_CH_122V);				//	bandgap voltage;
+			uint16_t accumulator = 0;
+			for(uint8_t i = 0; i < 127; i++) {
+				accumulator += a2dConvert10bit(ADC_CH_122V);
+			}
+			uint16_t adc_data = (accumulator>>7);
 			
 			
 			float vcc = 1100.0f * (1023.0f/(float)adc_data);
-			sprintf(out_buffer,"\rADC = %d (~ %0.0f mV)\r",adc_data,vcc);
+			sprintf(out_buffer,"\r~ %0.0f mV\r",vcc);
 			uartSendString(1,out_buffer);
 			_terminal_print_prompt();
 			CLEAR_RX_BUFFER;
@@ -286,19 +272,4 @@ void terminal_process_char(char data) {
 }
 
 
-uint16_t terminal_bandgap_voltage(void) {
-	//Start Single conversion
-	ADCSRA|=(1<<ADSC);
-
-	//Wait for conversion to complete
-	while(!(ADCSRA & (1<<ADIF)));
-
-	//Clear ADIF by writing one to it
-	//Note you may be wondering why we have write one to clear it
-	//This is standard way of clearing bits in io as said in datasheets.
-	//The code writes '1' but it result in setting bit to '0' !!!
-
-	ADCSRA|=(1<<ADIF);
-	return (ADC);
-}
 
