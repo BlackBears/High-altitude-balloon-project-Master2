@@ -28,12 +28,6 @@ void gps_init() {
 	nmeaInit();				//	initialize our NMEA processor	
 	uart0Init();
 	uartSetBaudRate(0,4800);
-	/*
-	UBRR0H = UBRRH_VALUE;		//	set the baud rate 4800 standard for GPS
-	UBRR0L = UBRRL_VALUE;
-	UCSR0B |= (1<<RXEN0);		//	just want to receive	
-	*/
-				
 }
 
 //
