@@ -99,7 +99,6 @@ s16 get_external_temperature();
 long barometric_pressure();
 u08 get_humidity();
 void read_rtc(void);
-void read_sensors(void);
 void report_enviro(void);
 
 /*	FUNCTIONS USED FOR EXTERNAL ACCESS */
@@ -205,6 +204,18 @@ static inline void poll_gps(void) {
 	//if( UCSR0A & (1<<RXC0) ) { u08 data = UDR0; if( data == 0x0D ) { uartSendByte(1,'*'); } }
 }
 
+static inline void read_sensors(void) {
+	tmp102_read_temp(&external_temperature);    // read ext temperature
+	tmp102_read_temp(&internal_temperature);
+	
+	bmp085Convert(&temperature, &pressure);
+	
+	//	every 15 seconds, measure and compute the temperature-compensated relative humidity 
+	if( rtc.second % 15 == 0) {
+		humidity = hih4030_compensated_rh(external_temperature.temperature);
+	}
+}
+
 //	
 //	update our warmers if we are using them
 //	at 64 Hz we modulate the output to the warmers by using pulse density modulation
@@ -227,6 +238,14 @@ static inline void update_warmers(uint32_t m) {
 #endif
 }
 
+////////////////////////////////////////////////////////////////////////
+//
+//	REPORTING
+//	
+//	save various reports to the SD card
+//
+////////////////////////////////////////////////////////////////////////
+
 //
 //	report position/velocity/altitude to UART1 (terminal or logger)
 //
@@ -244,6 +263,26 @@ static inline void report_position(void) {
 	uartSendString(1,buffer);
 }
 
+//
+//  send environmental data to whichever UART1 vector is active
+//  
+static inline void report_enviro(void) {
+	char buffer[60];
+	sprintf(buffer,"$ENV%02d%02d%02d",rtc.hour,rtc.minute,rtc.second);
+    uartSendString(1,buffer);
+		
+	sprintf(buffer,"IT%02d",internal_temperature.temperature);
+    uartSendString(1,buffer);
+		
+	sprintf(buffer,"ET%02d",external_temperature.temperature);
+    uartSendString(1,buffer);
+		
+	sprintf(buffer,"BP%ldBPT%ld",pressure,temperature);
+    uartSendString(1,buffer);
+		
+	sprintf(buffer,"HUM%03d",humidity); uartSendString(1,buffer);
+	uartSendByte(1,'\r');
+}
 
 #define USING_WARMERS 1
 #define FORCE_SERIAL_OUTPUT_TERMINAL 1
@@ -322,6 +361,11 @@ int main(void) {
 			if( m >= flight_status.event.gps_altitude_timeout ) {
 				//	TODO: record the GPS altitude in the 'altimeter'
 			}
+			//	periodically report our position
+			if( m >= position_millis ) {
+				position_millis = m + POSITION_REPORT_INTERVAL;	//	schedule next interval
+				report_position();
+			}
 			wdt_reset();
 			
 			#if USING_WARMERS == 1
@@ -362,12 +406,6 @@ int main(void) {
 		dx_indicator_update(m);		//	update the dx indicators
 		update_warmers(m);			//	update our warmers (e.g. battery etc.)
 		
-		//	periodically report our position
-		if( m >= position_millis ) {
-			position_millis = m + POSITION_REPORT_INTERVAL;	//	schedule next interval
-			report_position();
-		}
-		
 		//	reset RTC by the GPS time at certain interval (nominally 5 minutes)
 		if( m > rtc_set_millis ) {
 			rtc_set_millis = m + RTC_SET_INTERVAL;
@@ -381,14 +419,6 @@ int main(void) {
 		}	//	periodic reset RTC by GPS time
 	}
 }
-
-/************************************************************************/
-/* INITIALIZATION                                                       */
-/************************************************************************/
-
-
-
-
 
 /*  READ SENSORS */
 
@@ -414,37 +444,33 @@ u08 get_humidity() {
 }
 
 
-#define FAULT_TOLERANT 1
-#define NOT_FAULT_TOLERANT 0
-#define FAULT_TOLERANCE_MODE NOT_FAULT_TOLERANT
-
-void read_sensors(void) {
-	tmp102_read_temp(&external_temperature);    // read ext temperature
-	tmp102_read_temp(&internal_temperature);
-	
-	bmp085Convert(&temperature, &pressure);
-	
-	//	every 15 seconds, measure and compute the temperature-compensated relative humidity 
-	if( rtc.second % 15 == 0) {
-		humidity = hih4030_compensated_rh(external_temperature.temperature);
-	}
-}
 
 
 /************************************************************************/
 /* TIMEKEEPING                                                          */
 /************************************************************************/
+
+//
+//	read the DS1307
+//
 void read_rtc(void) {
     rtc.hour = ds1307_hours();
     rtc.minute = ds1307_minutes();
     rtc.second = ds1307_seconds();
 }
 
+//	
+//	read the RTC and copy the result to time_t pointed to by
+//	*time
+//
 void rtc_read_time(time_t *time) {
 	read_rtc();
 	memcpy(time,&rtc,sizeof(time_t));
 }
 
+//	
+//	set the RTC
+//
 void rtc_set_time(time_t *time) {
 	ds1307_set_hours(time->hour);
 	ds1307_set_minutes(time->minute);
@@ -466,33 +492,6 @@ unsigned long millis()
 	return m;
 }
 
-/************************************************************************/
-/* REPORTING                                                            */
-/************************************************************************/
-
-//
-//  send environmental data to whichever UART1 vector is active
-//  
-void report_enviro(void) {
-	char buffer[60];
-	sprintf(buffer,"$ENV%02d%02d%02d",rtc.hour,rtc.minute,rtc.second);
-    uartSendString(1,buffer);
-		
-	sprintf(buffer,"IT%02d",internal_temperature.temperature);
-    uartSendString(1,buffer);
-		
-	sprintf(buffer,"ET%02d",external_temperature.temperature);
-    uartSendString(1,buffer);
-		
-	sprintf(buffer,"BP%ldBPT%ld",pressure,temperature);
-    uartSendString(1,buffer);
-		
-	sprintf(buffer,"HUM%03d",humidity); uartSendString(1,buffer);
-	uartSendByte(1,'\r');
-}
-
-
-
 void set_serial_channel(mux_channel_t chan) {
 	mux_select_channel(chan);
 	flight_status.serial_channel = chan;
@@ -501,5 +500,3 @@ void set_serial_channel(mux_channel_t chan) {
 void set_ignore_serial_data(BOOL state) {
 	flight_status.should_ignore_serial_input = state;
 }
-
-/*	USER INTERACTION */
