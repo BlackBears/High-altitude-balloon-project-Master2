@@ -15,31 +15,18 @@ static float _voltage(BOOL is5V, voltage_oversampling_t oss) {
 	uint16_t adc_data;
 	if( oss == VOLTAGE_OS_0 ) {
 		adc_data = a2dConvert10bit((is5V)?ADC_CH_122V:ADC_CH_ADC6);
-	}
+	}	// no oversampling
 	else {
-		uint8_t oss_quant;
-		switch(oss) {
-			case VOLTAGE_OS_1:
-				oss_quant = 4;
-				break;
-			case VOLTAGE_OS_2:
-				oss_quant = 16;
-				break;
-			case VOLTAGE_OS_3:
-				oss_quant = 32;
-				break;
-			case VOLTAGE_OS_4:
-				oss_quant = 64;
-				break;
-		}
-		uint16_t accumulator = 0;
-		for(uint8_t i = 0; i < oss_quant; i++) {
-			accumulator += a2dConvert10bit((is5V)?ADC_CH_122V:ADC_CH_ADC6);
-		}
-		uint16_t adc_data = accumulator/oss_quant;
-		//char b[25];
-		//sprintf(b,"oss %02d|acc = %03d\r",oss_quant,accumulator);
-		//uartSendString(1,b);
+		if( oss == VOLTAGE_OS_1 ) {
+			uint16_t accumulator = 0;
+			for(uint8_t i = 0; i < 4; i++) {
+				accumulator += a2dConvert10bit((is5V)?ADC_CH_122V:ADC_CH_ADC6);
+			}
+			uint16_t adc_data = accumulator>>2;
+		} // oversampling 1
+		else {
+			return 0;
+		}	//	invalid oversampling value
 	}
 	if( is5V ) {
 		volt = 1100.0f * (1023.0f/(float)adc_data);

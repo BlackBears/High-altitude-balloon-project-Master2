@@ -8,9 +8,6 @@
 enum {
 	VOLTAGE_OS_0,		//	take a single reading
 	VOLTAGE_OS_1,		//	take four samples and average
-	VOLTAGE_OS_2,		//	take 16 samples and average
-	VOLTAGE_OS_3,		//	take 32 samples and average
-	VOLTAGE_OS_4,		//	take 64 samples and average
 };
 typedef uint8_t voltage_oversampling_t;
 
