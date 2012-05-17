@@ -44,6 +44,9 @@ float voltage_5V(voltage_oversampling_t oss) {
 	return _voltage(TRUE,oss);
 }
 
+//
+//	estimate the 3.3V bus voltage_3V
+//
 float voltage_3V(voltage_oversampling_t oss) {
 	return _voltage(FALSE,oss);
 }
