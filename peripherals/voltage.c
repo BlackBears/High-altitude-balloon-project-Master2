@@ -6,6 +6,9 @@
 #include "../capabilities/uart2.h"
 #include <string.h>
 
+//
+//	returns the estimate voltage on the specified bus, using oversampling
+//	
 static float _voltage(BOOL is5V, voltage_oversampling_t oss) {
 	a2dInit();
 	a2dSetReference((is5V)?ADC_REFERENCE_AVCC:ADC_REFERENCE_AREF);

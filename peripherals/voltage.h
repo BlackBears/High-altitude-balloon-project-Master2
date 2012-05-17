@@ -1,4 +1,15 @@
-
+//////////////////////////////////////////////////////////////////////////////////////////
+//	
+//	File		: 'terminal.c'
+//	Author		: Alan K. Duncan <duncan.alan@mac.com>
+//	Created		: 2012-05-15
+//	Revised		: 2012-05-17
+//	Version		: 1.0
+//	Target MCU	: ATmega644A
+//	
+//	This file provides voltage reporting functionality for the HAB project.
+//
+//////////////////////////////////////////////////////////////////////////////////////////
 
 #ifndef __VOLTAGE_H
 #define __VOLTAGE_H
