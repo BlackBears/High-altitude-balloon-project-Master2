@@ -136,14 +136,14 @@ void terminal_process_char(char data) {
 			CLEAR_RX_BUFFER;
         }	//	print humidity
         else if( strcmp_P(term_buffer,PSTR("AT+VOLT?")) == 0 ) {
-			float vcc = voltage_5V(VOLTAGE_OS_5);
+			float vcc = voltage_5V(VOLTAGE_OS_0);
 			sprintf(out_buffer,"\r~ %0.0f mV\r",vcc);
 			uartSendString(1,out_buffer);
 			_terminal_print_prompt();
 			CLEAR_RX_BUFFER;
         }	// print estimated VCC
 		else if( strstr_P(term_buffer,PSTR("AT+V33?"))) {
-			float vcc33 = voltage_3V(VOLTAGE_OS_5);
+			float vcc33 = voltage_3V(VOLTAGE_OS_0);
 			sprintf(out_buffer,"\r~ %0.2f mV\r",vcc33);
 			uartSendString(1,out_buffer);
 			_terminal_print_prompt();
