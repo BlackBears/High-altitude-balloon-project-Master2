@@ -20,7 +20,8 @@ static float _voltage(BOOL is5V, voltage_oversampling_t oss) {
 		if( oss == VOLTAGE_OS_1 ) {
 			uint16_t accumulator = 0;
 			for(uint8_t i = 0; i < 4; i++) {
-				accumulator += a2dConvert10bit((is5V)?ADC_CH_122V:ADC_CH_ADC6);
+				adc_data = a2dConvert10bit((is5V)?ADC_CH_122V:ADC_CH_ADC6);
+				accumulator += adc_data;
 			}
 			uint16_t adc_data = accumulator>>2;
 		} // oversampling 1
