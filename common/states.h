@@ -8,24 +8,13 @@
 #include "../peripherals/mux.h"
 
 enum {
-	k_flight_mode_off,	
-	k_flight_mode_preflight,
-	k_flight_mode_ascent,
-	k_flight_mode_descent,
-	k_flight_mode_landed
+	FLT_MODE_OFF,	
+	FLT_MODE_PREFLIGHT,
+	FLT_MODE_ASCENT,
+	FLT_MODE_DESCENT,
+	FLT_MODE_LANDED
 };
 typedef u08 flight_mode_t;
-
-enum {
-    k_peripheral_status_error,
-    k_peripheral_status_ok, 
-    k_peripheral_status_indeterminate
-};
-typedef u08 peripheral_status_t;
-
-#define PWR_ON  1
-#define PWR_OFF 0
-
 
 enum {
 	TERMINAL_WAITING,
