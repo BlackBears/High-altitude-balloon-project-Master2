@@ -33,7 +33,7 @@
 #include "peripherals/mux.h"
 #include "peripherals/dx.h"
 #include "peripherals/terminal.h"
-#incluce "peripherals/voltage.h"
+#include "peripherals/voltage.h"
 #include "gps/gps.h"
 #include "capabilities/nmea.h"
 #include "sensors/bmp085.h"
@@ -62,6 +62,7 @@ static uint8_t warmer_8Hz_div = 0;		//	8 Hz counter for warmer power update
 
 #define POSITION_REPORT_INTERVAL 5000UL	//	interval for recording position
 #define RTC_SET_INTERVAL 30000UL		//	interval for resetting RTC by GPS
+#define RTC_READ_INTERVAL 1000			//	interval for reading RTC
 #define SENSOR_REPORT_INTERVAL 5000UL	//	interval for reporting sensor readings
 
 #define clockCyclesPerMicrosecond() ( F_CPU / 7372800UL )
@@ -91,9 +92,6 @@ static unsigned char timer0_fract = 0;
 /************************************************************************/
 
 static void init(void);
-static void _init_rtc(void);
-static void _init_bmp085(void);
-static void _init_tmp102(void);
 static void _init_timer0(void);
 
 s16 get_internal_temperature();
@@ -130,6 +128,8 @@ static void _init_timer1(void) {
 ISR(TIMER1_OVF_vect)
 {
 	TCNT1 = 58162;
+	timer0_millis++;
+	/*
 	// copy these to local variables so they can be stored in registers
 	// (volatile variables must be read from memory on every access)
 	unsigned long m = timer0_millis;
@@ -145,6 +145,30 @@ ISR(TIMER1_OVF_vect)
 	timer0_fract = f;
 	timer0_millis = m;
 	timer0_overflow_count++;
+	*/
+}
+
+static inline void _init_rtc(void) {
+	ds1307_init(kDS1307Mode24HR);
+	ds1307_sqw_set_mode(k_ds1307_sqw_mode_a);
+}
+
+static inline void _init_warmers(void) {
+    warmer_controller_init();   // init a2d and pid params for warmers
+    warmer_setup();             // initiate warmer(s), defined in warmer_output.h
+    warmer_timing_setup();      // setup 64Hz interrupt on TIMER1, def in warmer_timing.h
+}
+
+static inline void _init_bmp085(void) {
+    bmp085_init();           	//  initialize
+}
+
+static inline void _init_tmp102(void) {
+    //  setup our internal and external temp sensors
+    internal_temperature.address = TMP102_ADDR_GND;
+	internal_temperature.location = TMP102_LOC_INT;
+	external_temperature.address = TMP102_ADDR_VCC;
+	external_temperature.location = TMP102_LOC_EXT;
 }
 
 static inline void initialize_i2c_peripherals(void) {
@@ -208,7 +232,7 @@ static inline void update_warmers(uint32_t m) {
 //
 static inline void report_position(void) {
 	char buffer[60];
-	sprintf(buffer,"$POS%02d%02d%02d%0.5f,%0.5f,%0.1f,%0.1f,%0.1f\r",
+	sprintf(buffer,"$POS%02d%02d%02d,%0.5f,%0.5f,%0.1f,%0.1f,%0.1f\r",
 		gpsInfo.fix.time.hour,
 		gpsInfo.fix.time.minute,
 		gpsInfo.fix.time.second,
@@ -243,6 +267,7 @@ int main(void) {
 
 	_init_timer1();
 	_delay_ms(10);
+	uint32_t m = millis();
 	sensor_millis = m + 2500;		//	stagger our position and sensor reports by 2.5 s
 	
 	hih4030_init();					//	initialize the humidity sensor
@@ -285,14 +310,14 @@ int main(void) {
 			}	//	terminal wait did NOT timeout
 		}	//	terminal waiting
 		else if( flight_status.terminal.state == TERMINAL_OFF ) {
-			if( m - rtc_millis >= 1000) {
+			if( m >= rtc_millis ) {
 				read_rtc();
-				rtc_millis = m;	
+				rtc_millis = m + RTC_READ_INTERVAL;		//	schedule next RTC read
 			}	// 1000 ms passed since read RTC	
-			if( m - sensor_millis >= 5000) {
+			if( m >= sensor_millis ) {
 				read_sensors();
 				report_enviro();
-				sensor_millis = m;
+				sensor_millis = m + SENSOR_REPORT_INTERVAL;
 			}	//	5000 ms passed since read sensors
 			if( m >= flight_status.event.gps_altitude_timeout ) {
 				//	TODO: record the GPS altitude in the 'altimeter'
@@ -348,161 +373,22 @@ int main(void) {
 			rtc_set_millis = m + RTC_SET_INTERVAL;
 			if( gpsInfo.fix.time.hour == rtc.hour )
 				memcpy(&rtc,&gpsInfo.fix.time,sizeof(time_t));
+			//	log the reset event
+			uartSendString_P(1,"$GPSR");
+			char b[10];
+			sprintf(b,"%02d%02d%02d\r",rtc.hour,rtc.minute,rtc.second);
+			uartSendString(1,b);
 		}	//	periodic reset RTC by GPS time
 	}
 }
-/*
-int main(void)
-{
-	DDRA &= ~0xFF;		//	PORTA (ADC is input for all channels)
-	DDRB |= (1<<PB1); PORTB &= ~(1<<PB1);
-	open_log_init();	
-	open_log_reset_nack();
-	mux_init();         //  setup UART1 & set terminal as output
-	//gps_init();			//	init the UART0, gps info and NMEA processor
-	uart1Init();		//	set up our multiplexed UART1 port
-	uartSetBaudRate(1,9600);
-	sei();
-	
-    wdt_disable();			//	disable
-	wdt_enable(WDTO_4S);	//	then re-enable the watchdog timer with 4 second interrupt
-	
-	//	initialize our TIMER0 which counts milliseconds
-	DO_AND_WAIT(_init_timer0(),10);
-	
-	//	some time stamps
-	rtc_millis = 0;
-	sensor_millis = 0;
-	warmer_64Hz_millis = 0;
-	
-	i2cInit();          //  initialize the I2C bus
-	
-	dx_indicator_init();
-	
-	flight_status.serial_channel = MUX_TERMINAL;
-	flight_status.terminal.state = TERMINAL_WAITING;
-	flight_status.terminal.timeout = millis() + 5000;		//	five seconds to respond
-	flight_status.event.gps_altitude_timeout = millis() + 10000;
-	terminal_init();
-	read_rtc();
-	////////////////////////////////////////////////////////////////////////
-	//	I2C bus initialization
-	//	Note that for unclear reasons, the BMP085 must be initialized first
-	//	followed by the TMP102 sensors.
-	/////////////////////////////////////////////////////////////////////////
-	_delay_ms(10);				   //  wait until stabilizes
-	
-	DO_AND_WAIT(_init_bmp085(),5);	//  init the barometric pressure sensor
-	DO_AND_WAIT(_init_tmp102(),5);	//	init the temperature monitors
-	DO_AND_WAIT(_init_rtc(),5);		//	init the real-time clock
-	DO_AND_WAIT(_init_warmers(),2);	//	init the warmers
-	hih4030_init();
-    while(1)
-    {
-		uint32_t m = millis();
-		
-			//	if we are waiting for the terminal input timer to expire and we reach the timeout
-			//	then say goodbye to the terminal and redirect the serial output to the OpenLog module
-			//
-		if( flight_status.terminal.state == TERMINAL_WAITING ) {
-			if( m >= flight_status.terminal.timeout ) {
-				//	terminal did not register within timeout, so we will begin regular procedures
-				flight_status.terminal.state = TERMINAL_OFF;
-				uartSendString_P(1,"\rTerminal timed out\r");
-				uartSendString_P(1,"Bye\r");
-				//  redirect logging to the OpenLog
-				#if FORCE_SERIAL_OUTPUT_TERMINAL == 0
-				mux_select_channel(MUX_OPEN_LOG);
-				#endif
-			}	//	terminal wait timed out
-			else {
-				if( !flight_status.should_ignore_serial_input  ) {
-					//	we're waiting for terminal input, so let's get a character
-					u08 terminal_data;
-					if( uartReceiveByte(1,&terminal_data) ) {
-						if( terminal_data != 0x0D )
-							uartSendByte(1,(char)terminal_data);
-						terminal_process_char( (char)terminal_data );
-						flight_status.terminal.state = TERMINAL_SELECTED;
-					}	//	valid data on terminal
-				}	// mux terminal is active channel
-			}	//	terminal wait did NOT timeout
-		}	//	terminal waiting
-		else if( flight_status.terminal.state == TERMINAL_OFF ) {
-			if( m - rtc_millis >= 1000) {
-				read_rtc();
-				rtc_millis = m;	
-			}	// 1000 ms passed since read RTC	
-			if( m - sensor_millis >= 5000) {
-				read_sensors();
-				report_enviro();
-				sensor_millis = m;
-			}	//	5000 ms passed since read sensors
-			if( m >= flight_status.event.gps_altitude_timeout ) {
-				//	TODO: record the GPS altitude in the 'altimeter'
-			}
-			wdt_reset();
-			
-			#if USING_WARMERS == 1
-			//	update our warmer output at 64 Hz (~15 ms)
-			if( m - warmer_64Hz_millis > 16) {
-				warmer_update_64Hz();       //  update the controller output at 64Hz
-				//  execute control update every 8 steps (64 Hz/8 = 8 Hz)
-				if( ++warmer_8Hz_div == 8) {
-					warmer_update_8Hz();
-					warmer_8Hz_div = 0;
-				}	//	8 Hz update
-				warmer_64Hz_millis = m;
-			}	//	64 Hz update
-			#endif
-			wdt_reset();
-			dx_indicator_update(m);
-		} // terminal is not waiting
-		else {
-				//	NOTE: this code block is everything else that should happen in the main loop
-				//	but is not contingent on anything else; so, tasks that should always run
-				//	as frequently as possible, e.g. polling the GPS, looking for cell calls, etc.
-				//
-			if( !flight_status.should_ignore_serial_input ) {
-				u08 terminal_data;
-				if( uartReceiveByte(1,&terminal_data) ) {
-					terminal_process_char( terminal_data );
-					if( terminal_data != 0x0D )
-						uartSendByte(1,terminal_data);
-				} //	valid data on terminal	
-			}	//	should not ignore serial data
-		}	//	terminal mode
-		wdt_reset();
-	} //	main loop
-}	// main
-*/
 
 /************************************************************************/
 /* INITIALIZATION                                                       */
 /************************************************************************/
 
-void _init_rtc(void) {
-	ds1307_init(kDS1307Mode24HR);
-	ds1307_sqw_set_mode(k_ds1307_sqw_mode_a);
-}
 
-void _init_warmers(void) {
-    warmer_controller_init();   // init a2d and pid params for warmers
-    warmer_setup();             // initiate warmer(s), defined in warmer_output.h
-    warmer_timing_setup();      // setup 64Hz interrupt on TIMER1, def in warmer_timing.h
-}
 
-void _init_bmp085(void) {
-    bmp085_init();           	//  initialize
-}
 
-void _init_tmp102(void) {
-    //  setup our internal and external temp sensors
-    internal_temperature.address = TMP102_ADDR_GND;
-	internal_temperature.location = TMP102_LOC_INT;
-	external_temperature.address = TMP102_ADDR_VCC;
-	external_temperature.location = TMP102_LOC_EXT;
-}
 
 /*  READ SENSORS */
 
@@ -602,7 +488,7 @@ void report_enviro(void) {
     uartSendString(1,buffer);
 		
 	sprintf(buffer,"HUM%03d",humidity); uartSendString(1,buffer);
-	uartSendByte(1,"\r");
+	uartSendByte(1,'\r');
 }
 
 
