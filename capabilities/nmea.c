@@ -155,31 +155,32 @@ uint8_t process_gga_packet() {
     SKIP_TO_NEXT_FIELD_IN_PACKET;	// next field is latitude
     strncpy(temp,&packet[i],2);
     gpsInfo.fix.latitude = atof(temp);
-    i += 2;		// advance to latitude minutes;
+    i += 2;							// advance to latitude minutes;
     strncpy(temp,&packet[i],2);
-    i_temp = atoi(temp);	// i_temp is the minutes latitude
-    SKIP_TO_NEXT_FIELD_IN_PACKET;	// advance to fractional minutes
+    i_temp = atoi(temp);			// i_temp is the minutes latitude
+    i++;							// advance to fractional minutes, past the decimal point
     i_temp2 = atoi(&packet[i]);		// fractional minutes
     gpsInfo.fix.latitude += (float)i_temp/60.0f + (float)i_temp2/3600.0f;
-    
+	
     SKIP_TO_NEXT_FIELD_IN_PACKET;	// next field is N/s indicator
     if( packet[i] == 'S' ) { gpsInfo.fix.latitude = -gpsInfo.fix.latitude; }
-    
+
     SKIP_TO_NEXT_FIELD_IN_PACKET;	// next field if longitude
     strncpy(temp,&packet[i],3); temp[3] = '\0';
+	//uartSendString(1,temp);
     gpsInfo.fix.longitude = atof(temp);
     i += 3;		// advance to longitude minutes;
     strncpy(temp,&packet[i],2); temp[2] = '\0';
-    i_temp = atoi(temp);	// i_temp is the minutes longitude
-    SKIP_TO_NEXT_FIELD_IN_PACKET;	// advance to fractional minutes
+    i_temp = atoi(temp);			// i_temp is the minutes longitude
+    i++;							// advance to fractional minutes, past the decimal
     i_temp2 = atoi(&packet[i]);		// fractional minutes
     gpsInfo.fix.longitude += (float)i_temp/60.0f + (float)i_temp2/3600.0f;
     
     // next field is the E/W indicator
-   SKIP_TO_NEXT_FIELD_IN_PACKET;
-    if( packet[i] == 'W' ) { gpsInfo.fix.longitude = -gpsInfo.fix.longitude; }
+	SKIP_TO_NEXT_FIELD_IN_PACKET;
+	if( packet[i] == 'W' ) { gpsInfo.fix.longitude = -gpsInfo.fix.longitude; } 
     
-    printf("degrees is %0.6f\r",gpsInfo.fix.longitude);
+   //printf("degrees is %0.6f\r",gpsInfo.fix.longitude);
     
     // next field is the fix quality
     SKIP_TO_NEXT_FIELD_IN_PACKET;
