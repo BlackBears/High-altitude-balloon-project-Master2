@@ -63,13 +63,14 @@ void dx_indicator_flash(u08 index,u08 count,u32 m) {
 void dx_indicator_update(u32 m) {
     for(u08 i = 0; i < DX_INDICATOR_COUNT; i++) {
         if( dx_indicators[i].count != 0 ) {
-            if( m >= dx_indicators[i].last_m + 500 ) {
+            if( m >= dx_indicators[i].last_m + 250 ) {
                 if( dx_indicators[i].state ) {
                     dx_indicator_set_state(i,FALSE);
                     dx_indicators[i].count--;
                 }
                 else
                     dx_indicator_set_state(i,TRUE);
+				dx_indicators[i].last_m = m;
             }   //  transition time
         }
         else
