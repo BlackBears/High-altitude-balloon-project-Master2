@@ -48,7 +48,7 @@ extern void set_ignore_serial_data(BOOL state);
 static void _terminal_print_welcome(void) {
     uartSendString_P(1,"Welcome to HAB: High-altitude balloon controller\r");
     uartSendString_P(1,"Copyright (c) 2012 Alan K Duncan\r");
-    uartSendString_P(1,"Software version 0.9.0\r\r");
+    uartSendString_P(1,"Software version 0.9.2\r\r");
 }
 
 //

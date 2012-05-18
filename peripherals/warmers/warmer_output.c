@@ -12,6 +12,10 @@
 u08 debug_count;
 #endif
 
+//	implemented in main file
+extern void log_bat_warmer(s16 ctemp, s16 ttemp, u08 rpwr, u08 spwr);
+
+
 const u08 output_profile[8][17] PROGMEM =
 {
     {0,0,0,0,0,0,0,0},  //  0
@@ -50,8 +54,8 @@ static void _warmer_output(u08 idx, u08 on_off) {
     }
 }
 
+
 void warmer_setup(void) {
-	
 #if WARMER_OUTPUT_DEBUG == 1
 	debug_count = 0;
 #endif
@@ -103,10 +107,8 @@ void warmer_update_8Hz(void) {
 	warmer_set(&warmers[WARMER_BATTERY], raw_power);
 #if WARMER_OUTPUT_DEBUG == 1
 	debug_count++;
-	if( debug_count % 63 == 0 ) {
-		char buffer[60];
-		sprintf(buffer,"Warmer c_temp = %02d | ttemp = %02d | r_pwr = %02d s_pwr = %02d\r",warmers[WARMER_BATTERY].current_temp,warmers[WARMER_BATTERY].target_temp,raw_power,warmers[WARMER_BATTERY].pid.output.power);
-		uartSendString(1,buffer);
+	if( debug_count % 63 == 0) {
+		log_bat_warmer(warmers[WARMER_BATTERY].current_temp,warmers[WARMER_BATTERY].target_temp,raw_power,warmers[WARMER_BATTERY].pid.output.power);
 		debug_count = 0;
 	}	
 #endif
