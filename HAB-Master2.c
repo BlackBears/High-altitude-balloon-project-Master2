@@ -288,11 +288,8 @@ int main(void) {
 	wdt_disable();			//	disable
 	wdt_enable(WDTO_4S);	//	then re-enable the watchdog timer with 4 second interrupt
 	
-	DDRB |= (1<<PB1); PORTB &= ~(1<<PB1);
-	for(u08 i = 0; i < 4; i++) {
-		PORTB ^= (1<<PB1);	
-		_delay_ms(100);
-	}		
+	dx_indicator_init();			//	init dx indicators
+	dx_indicator_flash(0,10,m);		//	a series of 10 flashes on dx_1 indicates restart
 	
 	//	init the openlog
 	open_log_init();	
@@ -307,7 +304,6 @@ int main(void) {
 	sensor_millis = m + 2500;		//	stagger our position and sensor reports by 2.5 s
 	
 	hih4030_init();					//	initialize the humidity sensor
-	dx_indicator_init();			//	init dx indicators
 	
 	initialize_i2c_peripherals();
 	
@@ -318,6 +314,7 @@ int main(void) {
 	
 	while(1) {
 		uint32_t m = millis();		//	get our current ms time
+		dx_indicator_update(m);
 		//	if we are waiting for the terminal input timer to expire and we reach the timeout
 		//	then say goodbye to the terminal and redirect the serial output to the OpenLog module
 		//
