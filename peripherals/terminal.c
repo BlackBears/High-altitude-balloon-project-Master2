@@ -89,6 +89,15 @@ static void _terminal_print_status(BOOL status) {
         uartSendString_P(1,"\rOFF\r");
 }
 
+//
+//	print out_buffer, a terminal prompt, and clear the buffer
+//
+static void _terminal_print_buffer_prompt_clear(void) {
+	uartSendString(1,out_buffer);
+	_terminal_print_prompt();
+	CLEAR_RX_BUFFER;
+}
+
 //	
 //	process a character returned from the terminal input
 //
@@ -109,45 +118,33 @@ void terminal_process_char(char data) {
             //  read internal temperature
             s16 t = get_internal_temperature();
             sprintf(out_buffer,"\r%02dC\r",t);
-            uartSendString(1,out_buffer);
-            _terminal_print_prompt();
-			CLEAR_RX_BUFFER;
+            _terminal_print_buffer_prompt_clear();
         }	//	print internal capsule temperature
         else if( strcmp_P(term_buffer,PSTR("AT+ET?")) == 0 ) {
             //  read external temperature
             s16 t = get_external_temperature();
             sprintf(out_buffer,"\r%02dC\r",t);
-            uartSendString(1,out_buffer);
-            _terminal_print_prompt();
-			CLEAR_RX_BUFFER;
+            _terminal_print_buffer_prompt_clear();
         } //	print external temperature
         else if( strcmp_P(term_buffer,PSTR("AT+BP?")) == 0 ) {
             long p = barometric_pressure();
             sprintf(out_buffer,"\r%06ld Pa\r",p);
-            uartSendString(1,out_buffer);
-            _terminal_print_prompt();
-			CLEAR_RX_BUFFER;
+            _terminal_print_buffer_prompt_clear();
         } //	print barometric pressure
         else if( strcmp_P(term_buffer,PSTR("AT+H?")) == 0 ) {
             u08 rh = get_humidity();
             sprintf(out_buffer,"\r%02d\r",rh);
-            uartSendString(1,out_buffer);
-            _terminal_print_prompt();
-			CLEAR_RX_BUFFER;
+            _terminal_print_buffer_prompt_clear();
         }	//	print humidity
         else if( strcmp_P(term_buffer,PSTR("AT+VOLT?")) == 0 ) {
 			float vcc = voltage_5V(VOLTAGE_OS_1);
 			sprintf(out_buffer,"\r~ %0.0f mV\r",vcc);
-			uartSendString(1,out_buffer);
-			_terminal_print_prompt();
-			CLEAR_RX_BUFFER;
+			_terminal_print_buffer_prompt_clear();
         }	// print estimated VCC
 		else if( strstr_P(term_buffer,PSTR("AT+V33?"))) {
 			float vcc33 = voltage_3V(VOLTAGE_OS_1);
 			sprintf(out_buffer,"\r~ %0.2f mV\r",vcc33);
-			uartSendString(1,out_buffer);
-			_terminal_print_prompt();
-			CLEAR_RX_BUFFER;
+			_terminal_print_buffer_prompt_clear();
 		}	//	print the voltage on the 3.3V bus
 		else if( strstr(term_buffer,"AT+RTC") ) {
 			//	command is something related to RTC
@@ -156,9 +153,7 @@ void terminal_process_char(char data) {
 				time_t current_time;
 				rtc_read_time(&current_time);
 				sprintf(out_buffer,"\r%02d:%02d:%02d\r", current_time.hour,current_time.minute,current_time.second);
-				uartSendString(1,out_buffer);
-				_terminal_print_prompt();	
-				CLEAR_RX_BUFFER;
+				_terminal_print_buffer_prompt_clear();
 			}	//	read the current time
 			else {
 				char *eq_ptr = strstr(term_buffer,"=");
@@ -178,9 +173,7 @@ void terminal_process_char(char data) {
 					rtc_set_time(&time);
 					uartSendString_P(1,"\rRTC set: ");
 					sprintf(out_buffer,"%02d:%02d:%02d\r",hour,minute,second);
-					uartSendString(1,out_buffer);
-					_terminal_print_prompt();
-					CLEAR_RX_BUFFER;
+					_terminal_print_buffer_prompt_clear();
 				}	// set the RTC
 				
 				else {
