@@ -22,12 +22,15 @@
 #include <util/delay.h>
 #include <stdlib.h>
 
-
+//	maximum length of the input buffer
 #define MAX_TERM_BUFFER_LEN 22
+
+//	macro for clearing the input buffer
 #define CLEAR_RX_BUFFER term_buffer[0] = '\0'
 
 char term_buffer[MAX_TERM_BUFFER_LEN];
 
+//	external functions, defined elsewhere
 extern s16 get_internal_temperature();  //  implemented in main program file
 extern s16 get_external_temperature();  //  implemented in main program file
 extern long barometric_pressure();  //  implemented in main program file
@@ -36,11 +39,11 @@ extern BOOL internal_temperature_power();   //  implemented in main pgm file
 extern BOOL external_temperature_power();   //  implemented in main pgm file
 extern void set_internal_temperature_power(BOOL status);    //  in main pgm
 extern void set_external_temperature_power(BOOL status);    //  in main pgm
-extern void rtc_read_time(time_t *time);
-extern void rtc_set_time(time_t *time);
-extern void open_log_ls(char *buffer, size_t size);
-extern void set_serial_channel(mux_channel_t chan);
-extern void set_ignore_serial_data(BOOL state);
+extern void rtc_read_time(time_t *time);					//	in main pgm
+extern void rtc_set_time(time_t *time);						//	in main pgm
+extern void open_log_ls(char *buffer, size_t size);			//	in openlog
+extern void set_serial_channel(mux_channel_t chan);			//	in main pgm
+extern void set_ignore_serial_data(BOOL state);				//	in main pgm
 
 //  
 //  prints a standard welcome message to the terminal
