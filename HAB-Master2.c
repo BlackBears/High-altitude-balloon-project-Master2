@@ -29,7 +29,6 @@
 #include "peripherals/ds1307.h"
 #include "peripherals/warmers/warmer.h"
 #include "peripherals/warmers/warmer_output.h"
-#include "peripherals/warmers/warmer_timing.h"
 #include "peripherals/mux.h"
 #include "peripherals/dx.h"
 #include "peripherals/terminal.h"
@@ -61,7 +60,7 @@ static uint32_t position_millis = 0;	//	ms until next position log
 static uint8_t warmer_8Hz_div = 0;		//	8 Hz counter for warmer power update
 
 #define POSITION_REPORT_INTERVAL 5000UL	//	interval for recording position
-#define RTC_SET_INTERVAL 30000UL		//	interval for resetting RTC by GPS
+#define RTC_SET_INTERVAL 300000UL		//	interval for resetting RTC by GPS
 #define RTC_READ_INTERVAL 1000			//	interval for reading RTC
 #define SENSOR_REPORT_INTERVAL 5000UL	//	interval for reporting sensor readings
 
@@ -99,13 +98,13 @@ s16 get_external_temperature();
 long barometric_pressure();
 u08 get_humidity();
 void read_rtc(void);
-void report_enviro(void);
 
 /*	FUNCTIONS USED FOR EXTERNAL ACCESS */
 void rtc_read_time(time_t *time);
 void rtc_set_time(time_t *time);
 void set_serial_channel(mux_channel_t chan);
 void set_ignore_serial_data(BOOL state);
+void log_bat_warmer(s16 ctemp, s16 ttemp, u08 rpwr, u08 spwr);
 
 unsigned long millis();
 
@@ -155,7 +154,6 @@ static inline void _init_rtc(void) {
 static inline void _init_warmers(void) {
     warmer_controller_init();   // init a2d and pid params for warmers
     warmer_setup();             // initiate warmer(s), defined in warmer_output.h
-    warmer_timing_setup();      // setup 64Hz interrupt on TIMER1, def in warmer_timing.h
 }
 
 static inline void _init_bmp085(void) {
@@ -173,13 +171,12 @@ static inline void _init_tmp102(void) {
 static inline void initialize_i2c_peripherals(void) {
 	i2cInit();          //  initialize the I2C bus
 	
-	read_rtc();
+	DO_AND_WAIT(read_rtc(),5);		//	initial reading of the RTC (DS1307)
 	////////////////////////////////////////////////////////////////////////
 	//	I2C bus initialization
 	//	Note that for unclear reasons, the BMP085 must be initialized first
 	//	followed by the TMP102 sensors.
 	/////////////////////////////////////////////////////////////////////////
-	_delay_ms(10);				    //  wait until stabilizes
 	
 	DO_AND_WAIT(_init_bmp085(),5);	//  init the barometric pressure sensor
 	DO_AND_WAIT(_init_tmp102(),5);	//	init the temperature monitors
@@ -499,4 +496,15 @@ void set_serial_channel(mux_channel_t chan) {
 
 void set_ignore_serial_data(BOOL state) {
 	flight_status.should_ignore_serial_input = state;
+}
+
+//	
+//	log the battery warmer data
+//
+void log_bat_warmer(s16 ctemp, s16 ttemp, u08 rpwr, u08 spwr) {
+	if( flight_status.terminal.state == TERMINAL_OFF ) {
+		char b[40];
+		sprintf(b,"$BWRM%02d%02d%02d,%02d,%02d,%02d,%02d\r",rtc.hour,rtc.minute,rtc.second,ctemp,ttemp,rpwr,spwr);
+		uartSendString(1,b);
+	}		
 }
