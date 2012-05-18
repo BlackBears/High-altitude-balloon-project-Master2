@@ -284,12 +284,6 @@
     <Compile Include="peripherals\warmers\warmer_pid.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="peripherals\warmers\warmer_timing.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="peripherals\warmers\warmer_timing.h">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="sensors\bmp085.c">
       <SubType>compile</SubType>
     </Compile>
